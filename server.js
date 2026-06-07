@@ -1,4 +1,4 @@
-// server.js - Authentification unique (owner ou player)
+// server.js - Authentification unique (owner ou player) - Sans agent
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
 const moment = require('moment-timezone');
 const crypto = require('crypto');
+const cron = require('node-cron');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -17,10 +18,11 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname)));
 
-// ==================== Base de données ====================
+// ==================== Base de données (corrigée pour Neon) ====================
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
+    // Pour Neon, l'URL contient déjà sslmode=require, donc on ne force pas ssl: {...}
+    ssl: process.env.DATABASE_URL?.includes('sslmode=require') ? undefined : { rejectUnauthorized: false }
 });
 
 pool.on('connect', (client) => {
@@ -33,7 +35,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'votre_secret_long_et_securise';
 
 // ==================== Création des tables ====================
 async function initTables() {
-    // Table propriétaire (un seul)
+    // Propriétaire
     await pool.query(`
         CREATE TABLE IF NOT EXISTS owners (
             id SERIAL PRIMARY KEY,
@@ -44,7 +46,6 @@ async function initTables() {
             created_at TIMESTAMP DEFAULT NOW()
         )
     `);
-    // Insérer un propriétaire par défaut si aucun
     const ownerExists = await pool.query('SELECT id FROM owners LIMIT 1');
     if (ownerExists.rows.length === 0) {
         const hashed = await bcrypt.hash('admin123', 10);
@@ -84,13 +85,13 @@ async function initTables() {
         CREATE TABLE IF NOT EXISTS winning_results (
             id SERIAL PRIMARY KEY,
             draw_id INTEGER REFERENCES draws(id) ON DELETE CASCADE,
-            numbers VARCHAR(3) NOT NULL,
+            numbers JSONB,
             lotto3 VARCHAR(3),
             date TIMESTAMP DEFAULT NOW()
         )
     `);
 
-    // Tickets joueurs
+    // Tickets
     await pool.query(`
         CREATE TABLE IF NOT EXISTS tickets (
             id SERIAL PRIMARY KEY,
@@ -107,7 +108,7 @@ async function initTables() {
         )
     `);
 
-    // Transactions joueur
+    // Transactions
     await pool.query(`
         CREATE TABLE IF NOT EXISTS transactions (
             id SERIAL PRIMARY KEY,
@@ -120,7 +121,7 @@ async function initTables() {
         )
     `);
 
-    // Codes de recharge
+    // Codes recharge
     await pool.query(`
         CREATE TABLE IF NOT EXISTS recharge_codes (
             id SERIAL PRIMARY KEY,
@@ -184,6 +185,46 @@ async function initTables() {
     console.log('✅ Tables créées/vérifiées');
 }
 
+// ==================== Cron : fermeture auto des tirages ====================
+// Fermeture à 2 minutes avant chaque tirage
+cron.schedule('* * * * *', async () => {
+    try {
+        const now = moment().tz('America/Port-au-Prince');
+        const currentTime = now.format('HH:mm:ss');
+        const result = await pool.query(
+            `UPDATE draws
+             SET active = false
+             WHERE active = true
+               AND (time - INTERVAL '2 minutes') <= $1::time
+               AND time > $1::time`,
+            [currentTime]
+        );
+        if (result.rowCount > 0) {
+            console.log(`🔒 ${result.rowCount} tirage(s) fermé(s) (2 minutes avant)`);
+        }
+    } catch (err) {
+        console.error('❌ Erreur fermeture automatique:', err);
+    }
+});
+
+// Réactivation à minuit
+function scheduleMidnightReactivation() {
+    const now = moment().tz('America/Port-au-Prince');
+    const midnight = moment.tz('America/Port-au-Prince').endOf('day').add(1, 'millisecond');
+    const delay = midnight.diff(now);
+    setTimeout(async () => {
+        try {
+            await pool.query(`UPDATE draws SET active = true WHERE active = false`);
+            console.log(`✅ Tous les tirages réactivés à minuit`);
+        } catch (err) {
+            console.error('❌ Erreur réactivation:', err);
+        } finally {
+            scheduleMidnightReactivation();
+        }
+    }, delay);
+    console.log(`⏰ Prochaine réactivation à ${midnight.format('HH:mm')} HT`);
+}
+
 // ==================== Middleware ====================
 const authenticateOwner = async (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -224,7 +265,7 @@ app.post('/api/auth/login', async (req, res) => {
         return res.status(400).json({ error: 'Identifiant et mot de passe requis' });
     }
 
-    // 1. Chercher dans owners (username)
+    // Propriétaire
     const ownerResult = await pool.query('SELECT id, name, username, password FROM owners WHERE username = $1', [identifier]);
     if (ownerResult.rows.length > 0) {
         const owner = ownerResult.rows[0];
@@ -235,7 +276,7 @@ app.post('/api/auth/login', async (req, res) => {
         }
     }
 
-    // 2. Chercher dans players (phone)
+    // Joueur
     const playerResult = await pool.query('SELECT id, name, phone, password, balance FROM players WHERE phone = $1', [identifier]);
     if (playerResult.rows.length > 0) {
         const player = playerResult.rows[0];
@@ -249,7 +290,7 @@ app.post('/api/auth/login', async (req, res) => {
     return res.status(401).json({ error: 'Identifiants incorrects' });
 });
 
-// ==================== Routes propriétaire (inchangées) ====================
+// ==================== Routes propriétaire ====================
 app.get('/api/owner/draws', authenticateOwner, async (req, res) => {
     const result = await pool.query('SELECT id, name, time, active FROM draws ORDER BY time');
     res.json(result.rows);
@@ -405,7 +446,7 @@ app.get('/api/owner/stats', authenticateOwner, async (req, res) => {
     });
 });
 
-// ==================== Routes joueur (compatibles avec player.html) ====================
+// ==================== Routes joueur ====================
 app.get('/api/player/balance', authenticatePlayer, async (req, res) => {
     const result = await pool.query('SELECT balance FROM players WHERE id = $1', [req.player.id]);
     res.json({ balance: parseFloat(result.rows[0].balance) });
@@ -513,8 +554,19 @@ app.post('/api/player/recharge/code', authenticatePlayer, async (req, res) => {
     }
 });
 
+// ==================== Route pour les résultats gagnants (nécessaire pour player.html) ====================
+app.get('/api/winners/results', authenticatePlayer, async (req, res) => {
+    const results = await pool.query(`
+        SELECT w.*, d.name FROM winning_results w
+        JOIN draws d ON w.draw_id = d.id
+        ORDER BY w.date DESC LIMIT 50
+    `);
+    res.json({ results: results.rows });
+});
+
 // ==================== Démarrage ====================
 initTables().then(() => {
+    scheduleMidnightReactivation();
     app.listen(port, '0.0.0.0', () => {
         console.log(`🚀 Serveur LOTATO démarré sur http://0.0.0.0:${port}`);
     });
