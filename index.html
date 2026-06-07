@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LOTATO PRO - Connexion</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #0a0b1e 0%, #1a1c3a 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .login-card {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 32px;
+            padding: 40px 30px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 20px 35px rgba(0,0,0,0.3);
+        }
+        .logo h1 {
+            font-size: 2rem;
+            background: linear-gradient(135deg, #ad00f1, #00d4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            color: #a0a0b8;
+            margin-bottom: 30px;
+            font-size: 0.9rem;
+        }
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .input-group label {
+            display: block;
+            color: #c0c0e0;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 16px;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: #00d4ff;
+            box-shadow: 0 0 0 2px rgba(0,212,255,0.2);
+        }
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #ad00f1, #00d4ff);
+            border: none;
+            border-radius: 30px;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .login-btn:hover {
+            transform: translateY(-2px);
+        }
+        .error-message {
+            color: #ff6b6b;
+            font-size: 0.85rem;
+            margin-top: 15px;
+            min-height: 40px;
+        }
+        .info-text {
+            margin-top: 20px;
+            font-size: 0.75rem;
+            color: #7a7a9a;
+        }
+        .demo-credentials {
+            background: rgba(0,212,255,0.1);
+            border-radius: 12px;
+            padding: 10px;
+            margin-top: 20px;
+            font-size: 0.7rem;
+            text-align: left;
+        }
+        .demo-credentials p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="logo">
+            <h1>LOTATO PRO</h1>
+        </div>
+        <div class="subtitle">Plateforme de jeu sécurisée</div>
+        
+        <form id="loginForm">
+            <div class="input-group">
+                <label><i class="fas fa-user"></i> Identifiant</label>
+                <input type="text" id="identifier" placeholder="Téléphone ou nom d'utilisateur" required autocomplete="off">
+            </div>
+            <div class="input-group">
+                <label><i class="fas fa-lock"></i> Mot de passe</label>
+                <input type="password" id="password" placeholder="Mot de passe" required>
+            </div>
+            <button type="submit" class="login-btn">Se connecter</button>
+            <div id="errorMsg" class="error-message"></div>
+        </form>
+        
+        <div class="demo-credentials">
+            <p>🔑 <strong>Mode démo</strong></p>
+            <p>👑 Propriétaire : <code>admin</code> / <code>admin123</code></p>
+            <p>🎲 Joueur : <code>50912345678</code> / <code>123456</code> (créer un compte si inexistant)</p>
+        </div>
+        <div class="info-text">
+            <i class="fas fa-shield-alt"></i> Connexion sécurisée
+        </div>
+    </div>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        const API_BASE = window.location.origin + '/api'; // ou 'https://lotato-lsvu.onrender.com/api' si déployé
+        
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const identifier = document.getElementById('identifier').value.trim();
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('errorMsg');
+            
+            if (!identifier || !password) {
+                errorDiv.innerText = 'Veuillez remplir tous les champs';
+                return;
+            }
+            
+            errorDiv.innerText = 'Connexion en cours...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ identifier, password })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok || !data.success) {
+                    errorDiv.innerText = data.error || 'Identifiants incorrects';
+                    return;
+                }
+                
+                // Stocker le token et les infos
+                localStorage.setItem('auth_token', data.token);
+                
+                if (data.role === 'owner') {
+                    // Rediriger vers l'interface propriétaire
+                    window.location.href = 'owner.html';
+                } else if (data.role === 'player') {
+                    // Stocker les infos du joueur
+                    localStorage.setItem('player_id', data.playerId);
+                    localStorage.setItem('player_name', data.name);
+                    // Rediriger vers l'interface joueur
+                    window.location.href = 'player.html';
+                } else {
+                    errorDiv.innerText = 'Rôle inconnu';
+                }
+            } catch (err) {
+                console.error(err);
+                errorDiv.innerText = 'Erreur de connexion au serveur';
+            }
+        });
+    </script>
+</body>
+</html>
