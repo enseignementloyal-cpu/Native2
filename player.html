@@ -7,445 +7,96 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-        body {
-            background: #0a0b1e;
-            color: #fff;
-        }
-        .app {
-            max-width: 500px;
-            margin: 0 auto;
-            background: #0f1122;
-            min-height: 100vh;
-            position: relative;
-        }
-        header {
-            background: linear-gradient(135deg, #1a1c3a, #0f1122);
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .logo h1 {
-            font-size: 1.3rem;
-            background: linear-gradient(135deg, #ad00f1, #ff007a);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .balance {
-            background: rgba(0,241,144,0.2);
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: bold;
-        }
-        .tabs {
-            display: flex;
-            background: #1a1c3a;
-            padding: 10px;
-            gap: 5px;
-        }
-        .tab {
-            flex: 1;
-            background: rgba(255,255,255,0.05);
-            border: none;
-            padding: 12px;
-            border-radius: 12px;
-            color: #fff;
-            font-weight: 600;
-            cursor: pointer;
-            text-align: center;
-        }
-        .tab.active {
-            background: linear-gradient(135deg, #ad00f1, #00d4ff);
-        }
-        .tab-content {
-            display: none;
-            padding: 20px;
-            padding-bottom: 80px;
-        }
-        .tab-content.active {
-            display: block;
-        }
-        .section-title {
-            font-size: 1.2rem;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .draw-grid {
-            display: grid;
-            grid-template-columns: repeat(2,1fr);
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-        .draw-card {
-            background: rgba(255,255,255,0.05);
-            border-radius: 16px;
-            padding: 12px;
-            text-align: center;
-            cursor: pointer;
-            border: 1px solid transparent;
-        }
-        .draw-card.selected {
-            border-color: #00d4ff;
-            background: rgba(0,212,255,0.1);
-        }
-        .draw-card.blocked {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .game-selector {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        .chip {
-            background: rgba(255,255,255,0.1);
-            border: none;
-            padding: 8px 16px;
-            border-radius: 30px;
-            color: #fff;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .chip.active {
-            background: linear-gradient(135deg, #ad00f1, #00d4ff);
-        }
-        .numeric-chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 15px;
-            display: none;
-        }
-        .numeric-chips.visible {
-            display: flex;
-        }
-        .lotto-games, .special-games {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 15px;
-            display: none;
-        }
-        .lotto-games.visible, .special-games.visible {
-            display: flex;
-        }
-        .sub-game-btn {
-            background: rgba(255,255,255,0.1);
-            border: none;
-            padding: 6px 14px;
-            border-radius: 30px;
-            color: #fff;
-            cursor: pointer;
-        }
-        .sub-game-btn.active {
-            background: #00d4ff;
-            color: #000;
-        }
-        .lotto-options {
-            display: flex;
-            gap: 10px;
-            margin: 10px 0;
-            flex-wrap: wrap;
-        }
-        .option-chip {
-            background: rgba(255,255,255,0.1);
-            padding: 5px 12px;
-            border-radius: 20px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .option-chip.active {
-            background: #00d4ff;
-            color: #000;
-        }
-        .input-container {
-            display: flex;
-            gap: 10px;
-            margin: 20px 0;
-        }
-        .input-container input {
-            flex: 1;
-            padding: 12px;
-            background: rgba(0,0,0,0.3);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px;
-            color: #fff;
-            text-align: center;
-        }
-        .add-btn {
-            background: linear-gradient(135deg, #ad00f1, #00d4ff);
-            border: none;
-            padding: 12px 20px;
-            border-radius: 12px;
-            color: #fff;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .cart-section {
-            background: rgba(255,255,255,0.02);
-            border-radius: 20px;
-            padding: 15px;
-            margin-top: 20px;
-        }
-        .cart-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-        }
-        .cart-list {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        .cart-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-        .cart-item button {
-            background: #ff4d4d;
-            border: none;
-            color: #fff;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            cursor: pointer;
-        }
-        .print-btn {
-            background: #00d4ff;
-            border: none;
-            padding: 10px;
-            border-radius: 30px;
-            color: #000;
-            font-weight: bold;
-            width: 100%;
-            margin-top: 10px;
-            cursor: pointer;
-        }
-        .history-item, .transaction-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-        .profit {
-            color: #00f190;
-        }
-        .loss {
-            color: #ff4d4d;
-        }
-        .recharge-btn {
-            background: rgba(0,212,255,0.2);
-            border: 1px solid #00d4ff;
-            padding: 12px;
-            border-radius: 12px;
-            width: 100%;
-            margin-bottom: 10px;
-            text-align: center;
-            cursor: pointer;
-        }
-        .code-input {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background: #1e1f3a;
-            border-radius: 20px;
-            padding: 20px;
-            width: 80%;
-            max-width: 350px;
-            text-align: center;
-        }
-        .login-container {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            min-height: 100vh;
-            padding: 20px;
-            background: #0a0b1e;
-        }
-        .login-card {
-            background: rgba(255,255,255,0.05);
-            border-radius: 30px;
-            padding: 30px;
-            text-align: center;
-        }
-        .login-card input {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            background: rgba(0,0,0,0.3);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px;
-            color: #fff;
-        }
-        .toggle-link {
-            color: #00d4ff;
-            cursor: pointer;
-            margin-top: 15px;
-            display: inline-block;
-        }
-        .error {
-            color: #ff4d4d;
-            margin-top: 10px;
-        }
-        .carousel {
-            position: relative;
-            width: 100%;
-            overflow: hidden;
-            margin-bottom: 20px;
-            border-radius: 16px;
-            background: rgba(0,0,0,0.3);
-        }
-        .carousel-inner {
-            display: flex;
-            transition: transform 0.5s ease;
-        }
-        .carousel-item {
-            flex: 0 0 100%;
-        }
-        .carousel-item img {
-            width: 100%;
-            height: 150px;
-            object-fit: cover;
-        }
-        .carousel-btn {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            background: rgba(0,0,0,0.5);
-            color: white;
-            border: none;
-            padding: 10px;
-            cursor: pointer;
-            z-index: 10;
-        }
-        .carousel-btn.prev { left: 10px; }
-        .carousel-btn.next { right: 10px; }
-        .announcement-bar {
-            background: rgba(255,193,7,0.2);
-            border-left: 4px solid #ffc107;
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 8px;
-            font-size: 0.9rem;
-        }
-        .search-bar {
-            padding: 10px 15px;
-            background: #1a1c3a;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .search-bar input {
-            width: 100%;
-            padding: 12px 15px;
-            border: none;
-            border-radius: 30px;
-            background: #0f1122;
-            color: #fff;
-            font-size: 1rem;
-            outline: none;
-        }
-        .badge {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: bold;
-        }
-        .badge-win { background: #00f190; color: #000; }
-        .badge-lost { background: #ff4d4d; color: #fff; }
-        .badge-wait { background: #ffc107; color: #000; }
-        .action-buttons {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        .btn-small {
-            background: rgba(255,255,255,0.1);
-            border: none;
-            padding: 4px 10px;
-            border-radius: 20px;
-            color: #fff;
-            cursor: pointer;
-            font-size: 0.7rem;
-        }
-        .delete-history-btn {
-            background: #ff4d4d;
-            border: none;
-            padding: 4px 10px;
-            border-radius: 20px;
-            color: #fff;
-            cursor: pointer;
-            font-size: 0.7rem;
-        }
-        .history-card {
-            background: rgba(255,255,255,0.03);
-            border-radius: 16px;
-            padding: 12px;
-            margin-bottom: 12px;
-        }
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
-        .footer {
-            margin-top: 10px;
-        }
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; }
+        body { background:#0a0b1e; color:#fff; }
+        .app { max-width:500px; margin:0 auto; background:#0f1122; min-height:100vh; position:relative; }
+        header { background:linear-gradient(135deg,#1a1c3a,#0f1122); padding:15px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); }
+        .logo h1 { font-size:1.3rem; background:linear-gradient(135deg,#ad00f1,#ff007a); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .balance { background:rgba(0,241,144,0.2); padding:5px 12px; border-radius:20px; font-size:0.9rem; font-weight:bold; }
+        .tabs { display:flex; background:#1a1c3a; padding:10px; gap:5px; }
+        .tab { flex:1; background:rgba(255,255,255,0.05); border:none; padding:12px; border-radius:12px; color:#fff; font-weight:600; cursor:pointer; text-align:center; }
+        .tab.active { background:linear-gradient(135deg,#ad00f1,#00d4ff); }
+        .tab-content { display:none; padding:20px; padding-bottom:80px; }
+        .tab-content.active { display:block; }
+        .section-title { font-size:1.2rem; margin-bottom:15px; display:flex; align-items:center; gap:8px; }
+        .draw-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:20px; }
+        .draw-card { background:rgba(255,255,255,0.05); border-radius:16px; padding:12px; text-align:center; cursor:pointer; border:1px solid transparent; }
+        .draw-card.selected { border-color:#00d4ff; background:rgba(0,212,255,0.1); }
+        .draw-card.blocked { opacity:0.5; cursor:not-allowed; }
+        .game-selector { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px; }
+        .chip { background:rgba(255,255,255,0.1); border:none; padding:8px 16px; border-radius:30px; color:#fff; cursor:pointer; }
+        .chip.active { background:linear-gradient(135deg,#ad00f1,#00d4ff); }
+        .numeric-chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:15px; display:none; }
+        .numeric-chips.visible { display:flex; }
+        .lotto-games, .special-games { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px; display:none; }
+        .lotto-games.visible, .special-games.visible { display:flex; }
+        .sub-game-btn { background:rgba(255,255,255,0.1); border:none; padding:6px 14px; border-radius:30px; color:#fff; cursor:pointer; }
+        .lotto-options { display:flex; gap:10px; margin:10px 0; flex-wrap:wrap; }
+        .option-chip { background:rgba(255,255,255,0.1); padding:5px 12px; border-radius:20px; cursor:pointer; display:flex; align-items:center; gap:5px; }
+        .option-chip.active { background:#00d4ff; color:#000; }
+        .input-container { display:flex; gap:10px; margin:20px 0; }
+        .input-container input { flex:1; padding:12px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#fff; text-align:center; }
+        .add-btn { background:linear-gradient(135deg,#ad00f1,#00d4ff); border:none; padding:12px 20px; border-radius:12px; color:#fff; font-weight:bold; cursor:pointer; }
+        .cart-section { background:rgba(255,255,255,0.02); border-radius:20px; padding:15px; margin-top:20px; }
+        .cart-header { display:flex; justify-content:space-between; margin-bottom:10px; }
+        .cart-list { max-height:300px; overflow-y:auto; }
+        .cart-item { display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid rgba(255,255,255,0.05); }
+        .cart-item button { background:#ff4d4d; border:none; color:#fff; width:24px; height:24px; border-radius:50%; cursor:pointer; }
+        .print-btn { background:#00d4ff; border:none; padding:10px; border-radius:30px; color:#000; font-weight:bold; width:100%; margin-top:10px; cursor:pointer; }
+        .history-item, .transaction-item { display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid rgba(255,255,255,0.05); }
+        .profit { color:#00f190; }
+        .loss { color:#ff4d4d; }
+        .recharge-btn { background:rgba(0,212,255,0.2); border:1px solid #00d4ff; padding:12px; border-radius:12px; width:100%; margin-bottom:10px; text-align:center; cursor:pointer; }
+        .code-input { display:flex; gap:10px; margin-top:10px; }
+        .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:1000; }
+        .modal-content { background:#1e1f3a; border-radius:20px; padding:20px; width:80%; max-width:350px; text-align:center; }
+        .carousel { position:relative; width:100%; overflow:hidden; margin-bottom:20px; border-radius:16px; background:rgba(0,0,0,0.3); }
+        .carousel-inner { display:flex; transition:transform 0.5s ease; }
+        .carousel-item { flex:0 0 100%; }
+        .carousel-item img { width:100%; height:150px; object-fit:cover; }
+        .carousel-btn { position:absolute; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.5); color:white; border:none; padding:10px; cursor:pointer; z-index:10; }
+        .carousel-btn.prev { left:10px; }
+        .carousel-btn.next { right:10px; }
+        .announcement-bar { background:rgba(255,193,7,0.2); border-left:4px solid #ffc107; padding:10px; margin-bottom:15px; border-radius:8px; font-size:0.9rem; }
+        .search-bar { padding:10px 15px; background:#1a1c3a; border-bottom:1px solid rgba(255,255,255,0.1); }
+        .search-bar input { width:100%; padding:12px 15px; border:none; border-radius:30px; background:#0f1122; color:#fff; outline:none; }
+        .badge { padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:bold; }
+        .badge-win { background:#00f190; color:#000; }
+        .badge-lost { background:#ff4d4d; color:#fff; }
+        .action-buttons { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+        .btn-small { background:rgba(255,255,255,0.1); border:none; padding:4px 10px; border-radius:20px; color:#fff; cursor:pointer; font-size:0.7rem; }
+        .history-card { background:rgba(255,255,255,0.03); border-radius:16px; padding:12px; margin-bottom:12px; }
+        .card-header { display:flex; justify-content:space-between; margin-bottom:8px; }
+        .footer { margin-top:10px; }
     </style>
 </head>
 <body>
 <div id="app">
-    <!-- Login / Register -->
-    <div id="auth-container">
-        <div class="login-container">
-            <div class="login-card">
+    <!-- L'écran de connexion/inscription sera masqué si déjà connecté -->
+    <div id="auth-container" style="display:none;">
+        <div class="login-container" style="display:flex; flex-direction:column; justify-content:center; min-height:100vh; padding:20px; background:#0a0b1e;">
+            <div class="login-card" style="background:rgba(255,255,255,0.05); border-radius:30px; padding:30px; text-align:center;">
                 <h1>LOTATO PRO</h1>
                 <h2 id="auth-title">Connexion</h2>
-                <div id="auth-message" class="error"></div>
+                <div id="auth-message" style="color:#ff4d4d; margin-top:10px;"></div>
                 <form id="login-form">
-                    <input type="tel" id="login-phone" placeholder="Numéro de téléphone" required>
-                    <input type="password" id="login-password" placeholder="Mot de passe" required>
+                    <input type="tel" id="login-phone" placeholder="Téléphone" required style="width:100%; padding:12px; margin:10px 0; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#fff;">
+                    <input type="password" id="login-password" placeholder="Mot de passe" required style="width:100%; padding:12px; margin:10px 0; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#fff;">
                     <button type="submit" class="add-btn" style="width:100%;">Se connecter</button>
                 </form>
                 <form id="register-form" style="display:none;">
-                    <input type="text" id="reg-name" placeholder="Nom complet" required>
-                    <input type="tel" id="reg-phone" placeholder="Numéro de téléphone" required>
-                    <input type="password" id="reg-password" placeholder="Mot de passe" required>
-                    <input type="text" id="reg-zone" placeholder="Zone (optionnel)">
+                    <input type="text" id="reg-name" placeholder="Nom complet" required style="width:100%; padding:12px; margin:10px 0; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#fff;">
+                    <input type="tel" id="reg-phone" placeholder="Téléphone" required style="width:100%; padding:12px; margin:10px 0; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#fff;">
+                    <input type="password" id="reg-password" placeholder="Mot de passe" required style="width:100%; padding:12px; margin:10px 0; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#fff;">
+                    <input type="text" id="reg-zone" placeholder="Zone (optionnel)" style="width:100%; padding:12px; margin:10px 0; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#fff;">
                     <button type="submit" class="add-btn" style="width:100%;">S'inscrire</button>
                 </form>
-                <div><span id="toggle-auth" class="toggle-link">Pas de compte ? Créer un compte</span></div>
+                <div><span id="toggle-auth" style="color:#00d4ff; cursor:pointer;">Pas de compte ? Créer un compte</span></div>
             </div>
         </div>
     </div>
 
-    <!-- Dashboard joueur -->
+    <!-- Interface principale joueur -->
     <div id="dashboard-container" style="display:none;">
         <header>
             <div class="logo"><h1 id="lottery-name">LOTATO PRO</h1></div>
@@ -466,7 +117,7 @@
             <button class="tab" data-tab="wins">🏆 Gains</button>
         </div>
 
-        <!-- Onglet Jouer -->
+        <!-- Jouer -->
         <div id="play-tab" class="tab-content active">
             <div class="section-title">📅 Choisissez un tirage</div>
             <div class="draw-grid" id="draws-container"></div>
@@ -553,32 +204,28 @@
 </div>
 
 <script>
-    // ==================== CONFIGURATION SERVEUR ====================
+    // ==================== CONFIGURATION ====================
     const API_BASE = 'https://lotato-lsvu.onrender.com/api';
     
-    // ==================== ÉTAT GLOBAL ====================
-    let authToken = localStorage.getItem('player_token');
-    let playerId = null, playerName = null;
-    let balance = 0;
-    let draws = [];
-    let currentDrawId = null;
-    let currentCart = [];
-    let selectedGame = 'borlette';
-    let lotto4Options = [true, true, true];
-    let lotto5Options = [true, true, true];
-    let globalBlockedNumbers = [];
-    let drawBlockedNumbers = {};
-    let numberLimits = {};
-    let lotterySettings = {};
-    let carouselImages = [];
-    let carouselIndex = 0;
-    let historySearchTerm = '';
-    let ticketsHistory = [];
-
-    // ==================== AUTHENTIFICATION ====================
-    if (authToken) initPlayerInterface();
-    else document.getElementById('auth-container').style.display = 'block';
-
+    // Récupération du token (peu importe la clé utilisée)
+    let authToken = localStorage.getItem('player_token') || localStorage.getItem('auth_token');
+    let playerId = localStorage.getItem('player_id');
+    let playerName = localStorage.getItem('player_name');
+    
+    // Si pas de token, on affiche l'écran de connexion/inscription
+    if (!authToken || !playerId) {
+        // Afficher le formulaire d'auth
+        document.getElementById('auth-container').style.display = 'block';
+        document.getElementById('dashboard-container').style.display = 'none';
+    } else {
+        // Déjà connecté : charger l'interface directement
+        document.getElementById('auth-container').style.display = 'none';
+        document.getElementById('dashboard-container').style.display = 'block';
+        document.getElementById('player-name').innerText = playerName;
+        initPlayerInterface();
+    }
+    
+    // Gestion des formulaires d'authentification (pour ceux qui ne sont pas encore connectés)
     document.getElementById('toggle-auth').addEventListener('click', () => {
         const loginForm = document.getElementById('login-form');
         const registerForm = document.getElementById('register-form');
@@ -595,29 +242,30 @@
             document.getElementById('toggle-auth').innerText = 'Pas de compte ? Créer un compte';
         }
     });
-
+    
     document.getElementById('login-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const phone = document.getElementById('login-phone').value;
         const password = document.getElementById('login-password').value;
         const msg = document.getElementById('auth-message');
         try {
-            const res = await fetch(`${API_BASE}/auth/player/login`, {
+            const res = await fetch(`${API_BASE}/auth/login`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone, password })
+                body: JSON.stringify({ identifier: phone, password })
             });
             const data = await res.json();
-            if (data.success) {
-                authToken = data.token;
-                playerId = data.playerId;
-                playerName = data.name;
-                balance = data.balance;
-                localStorage.setItem('player_token', authToken);
-                initPlayerInterface();
-            } else { msg.innerText = data.error || 'Échec'; }
+            if (data.success && data.role === 'player') {
+                localStorage.setItem('auth_token', data.token);
+                localStorage.setItem('player_token', data.token);
+                localStorage.setItem('player_id', data.playerId);
+                localStorage.setItem('player_name', data.name);
+                window.location.reload(); // Recharge pour afficher l'interface
+            } else {
+                msg.innerText = data.error || 'Identifiants incorrects';
+            }
         } catch(err) { msg.innerText = 'Erreur réseau'; }
     });
-
+    
     document.getElementById('register-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const name = document.getElementById('reg-name').value;
@@ -632,56 +280,60 @@
             });
             const data = await res.json();
             if (data.success) {
-                authToken = data.token;
-                playerId = data.playerId;
-                playerName = data.name;
-                balance = data.balance;
-                localStorage.setItem('player_token', authToken);
-                initPlayerInterface();
-            } else { msg.innerText = data.error || 'Échec inscription'; }
+                localStorage.setItem('auth_token', data.token);
+                localStorage.setItem('player_token', data.token);
+                localStorage.setItem('player_id', data.playerId);
+                localStorage.setItem('player_name', data.name);
+                window.location.reload();
+            } else {
+                msg.innerText = data.error || 'Échec inscription';
+            }
         } catch(err) { msg.innerText = 'Erreur réseau'; }
     });
-
-    async function initPlayerInterface() {
-        document.getElementById('auth-container').style.display = 'none';
-        document.getElementById('dashboard-container').style.display = 'block';
-        document.getElementById('player-name').innerText = playerName;
-        await loadDraws();
-        await updateBalance();
-        await loadSettingsAndAds();
-        await loadLimitsAndBlocks();
-        await loadHistory();
-        await loadTransactions();
-        await loadWins();
-        setupTabs();
-        document.getElementById('add-bet-btn').addEventListener('click', addBet);
-        document.getElementById('amt-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') addBet(); });
-        document.getElementById('history-search').addEventListener('input', (e) => { historySearchTerm = e.target.value; renderHistoryList(); });
-    }
-
-    // ==================== APPELS API ====================
+    
+    // ==================== FONCTIONS PRINCIPALES (joueur) ====================
+    let balance = 0;
+    let draws = [];
+    let currentDrawId = null;
+    let currentCart = [];
+    let selectedGame = 'borlette';
+    let lotto4Options = [true, true, true];
+    let lotto5Options = [true, true, true];
+    let globalBlockedNumbers = [];
+    let drawBlockedNumbers = {};
+    let numberLimits = {};
+    let lotterySettings = {};
+    let carouselImages = [];
+    let carouselIndex = 0;
+    let historySearchTerm = '';
+    let ticketsHistory = [];
+    
     async function fetchAPI(url, options = {}) {
         const res = await fetch(`${API_BASE}${url}`, {
             ...options,
             headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json', ...options.headers }
         });
-        if (res.status === 401) { localStorage.removeItem('player_token'); window.location.reload(); throw new Error('Non authentifié'); }
+        if (res.status === 401) {
+            localStorage.clear();
+            window.location.reload();
+            throw new Error('Non authentifié');
+        }
         return res.json();
     }
-
+    
     async function updateBalance() {
         const data = await fetchAPI('/player/balance');
         balance = data.balance;
         document.getElementById('balance-display').innerHTML = balance.toLocaleString() + ' G';
     }
-
+    
     async function loadDraws() {
         const data = await fetchAPI('/draws');
         draws = data.draws || [];
         if (draws.length) currentDrawId = draws[0].id;
         renderDraws();
     }
-
+    
     function renderDraws() {
         const container = document.getElementById('draws-container');
         if (!draws.length) { container.innerHTML = '<div>Aucun tirage</div>'; return; }
@@ -693,9 +345,9 @@
             </div>
         `).join('');
     }
-
+    
     function selectDraw(id) { currentDrawId = id; renderDraws(); }
-
+    
     async function loadLimitsAndBlocks() {
         const data = await fetchAPI('/player/limits');
         globalBlockedNumbers = data.globalBlocked || [];
@@ -705,7 +357,7 @@
         (data.globalLimits || []).forEach(l => { numberLimits[`${currentDrawId}_${l.number}`] = l.limit_amount; });
         (data.drawLimits || []).forEach(l => { numberLimits[`${l.draw_id}_${l.number}`] = l.limit_amount; });
     }
-
+    
     async function loadSettingsAndAds() {
         const data = await fetchAPI('/player/settings');
         lotterySettings = data;
@@ -720,12 +372,12 @@
         const ann = data.announcements;
         if (ann) { document.getElementById('announcement-bar').innerHTML = `<i class="fas fa-bullhorn"></i> ${ann}`; document.getElementById('announcement-bar').style.display = 'block'; }
     }
-
+    
     function startCarousel() { if(carouselImages.length>1) setInterval(()=>nextSlide(),5000); }
     function prevSlide() { const inner = document.getElementById('carousel-inner'); if(inner) { carouselIndex = (carouselIndex-1+carouselImages.length)%carouselImages.length; inner.style.transform = `translateX(-${carouselIndex*100}%)`; } }
     function nextSlide() { const inner = document.getElementById('carousel-inner'); if(inner) { carouselIndex = (carouselIndex+1)%carouselImages.length; inner.style.transform = `translateX(-${carouselIndex*100}%)`; } }
-
-    // ==================== JEUX ====================
+    
+    // Jeux
     function selectMainGame(game) {
         document.querySelectorAll('#game-types .chip').forEach(c => c.classList.remove('active'));
         document.querySelector(`#game-types .chip[data-game="${game}"]`).classList.add('active');
@@ -736,13 +388,13 @@
         else if (game === 'special') document.getElementById('special-games').classList.add('visible');
         else selectGame('borlette');
     }
-
+    
     function toggleNumericChips() {
         const div = document.getElementById('numeric-chips');
         div.classList.toggle('visible');
         if (div.classList.contains('visible')) { document.getElementById('lotto-games').classList.remove('visible'); document.getElementById('special-games').classList.remove('visible'); }
     }
-
+    
     function selectGame(game) {
         selectedGame = game;
         const input = document.getElementById('num-input');
@@ -757,19 +409,19 @@
         document.getElementById('lotto5-options').style.display = (game === 'lotto5') ? 'flex' : 'none';
         input.focus();
     }
-
+    
     function toggleLottoOption(gameType, opt) {
         if (gameType === 4) lotto4Options[opt-1] = !lotto4Options[opt-1];
         else lotto5Options[opt-1] = !lotto5Options[opt-1];
         const chip = document.querySelector(`#lotto${gameType}-options .option-chip[data-option="${opt}"]`);
         if (chip) chip.classList.toggle('active');
     }
-
+    
     function isNumberBlocked(num, drawId) {
         if (globalBlockedNumbers.includes(num)) return true;
         return (drawBlockedNumbers[drawId] || []).includes(num);
     }
-
+    
     function checkNumberLimit(num, drawId, amount) {
         const key = `${drawId}_${num}`;
         const limit = numberLimits[key];
@@ -777,26 +429,26 @@
         const current = currentCart.filter(b => b.drawId === drawId && b.cleanNumber === num).reduce((s,b)=>s+b.amount,0);
         return (current + amount) <= limit;
     }
-
+    
     function addBet() {
         if (!currentDrawId) { alert('Choisissez un tirage'); return; }
         const amt = parseFloat(document.getElementById('amt-input').value);
         if (isNaN(amt) || amt <= 0) { alert('Montant invalide'); return; }
         if (amt > balance) { alert('Solde insuffisant'); return; }
-
+        
         let numRaw = document.getElementById('num-input').value.trim();
         let cleanNum = numRaw.replace(/[^0-9]/g, '');
         let isValid = false;
-
+        
         if (selectedGame === 'borlette') isValid = /^\d{2}$/.test(cleanNum);
         else if (selectedGame === 'lotto3') isValid = /^\d{3}$/.test(cleanNum);
         else if (selectedGame === 'lotto4') isValid = /^\d{4}$/.test(cleanNum);
         else if (selectedGame === 'lotto5') isValid = /^\d{5}$/.test(cleanNum);
         else if (selectedGame === 'mariage') isValid = /^\d{4}$/.test(cleanNum);
         else if (['bo','grap','auto_marriage','auto_lotto4','auto_lotto5','n0','n1','n2','n3','n4','n5','n6','n7','n8','n9'].includes(selectedGame)) isValid = true;
-
+        
         if (!isValid && !selectedGame.startsWith('n') && !selectedGame.startsWith('auto') && selectedGame!=='bo' && selectedGame!=='grap') { alert('Format invalide'); return; }
-
+        
         // Auto-génération
         if (selectedGame === 'bo') {
             for(let i=0;i<100;i++) { let n=i.toString().padStart(2,'0'); if(n[0]===n[1]) currentCart.push({id:Date.now()+Math.random(), game:'borlette', number:n, cleanNumber:n, amount:amt, drawId:currentDrawId}); }
@@ -829,11 +481,11 @@
             for(let i=0;i<uniq.length;i++) for(let j=0;j<uniq.length;j++) if(i!==j) currentCart.push({id:Date.now()+Math.random(), game:'lotto5', number:`${uniq[i]}-${uniq[j].slice(-2)}`, cleanNumber:uniq[i]+uniq[j].slice(-2), amount:amt, drawId:currentDrawId});
             renderCart(); document.getElementById('amt-input').value=''; return;
         }
-
-        // Vérifications limites et blocages
+        
+        // Vérifications limites
         if (isNumberBlocked(cleanNum, currentDrawId)) { alert(`Numéro ${cleanNum} bloqué`); return; }
         if (!checkNumberLimit(cleanNum, currentDrawId, amt)) { alert(`Limite dépassée pour ${cleanNum}`); return; }
-
+        
         if (selectedGame === 'lotto4') {
             for(let i=0;i<3;i++) if(lotto4Options[i]) currentCart.push({id:Date.now()+Math.random(), game:'lotto4', number:`${cleanNum.slice(0,2)}-${cleanNum.slice(2,4)}`, cleanNumber:cleanNum, amount:amt, drawId:currentDrawId, option:i+1});
         } else if (selectedGame === 'lotto5') {
@@ -846,7 +498,7 @@
         document.getElementById('amt-input').value = '';
         document.getElementById('num-input').focus();
     }
-
+    
     function removeBet(id) { currentCart = currentCart.filter(b => b.id !== id); renderCart(); }
     function renderCart() {
         const container = document.getElementById('cart-display');
@@ -858,7 +510,7 @@
         totalEl.innerText = total.toLocaleString() + ' G';
         itemsCount.innerText = currentCart.length;
     }
-
+    
     async function validateTicket() {
         if (!currentDrawId) { alert('Choisissez un tirage'); return; }
         if (!currentCart.length) { alert('Panier vide'); return; }
@@ -866,7 +518,6 @@
         if (!draw || !draw.active) { alert('Tirage fermé'); return; }
         const total = currentCart.reduce((s,b)=>s+b.amount,0);
         if (total > balance) { alert('Solde insuffisant'); return; }
-
         try {
             const res = await fetchAPI('/player/tickets/save', {
                 method: 'POST',
@@ -883,8 +534,7 @@
             } else { alert('Erreur: ' + (res.error || '')); }
         } catch(e) { alert('Erreur réseau'); }
     }
-
-    // ==================== HISTORIQUE ====================
+    
     async function loadHistory() {
         const data = await fetchAPI('/player/tickets');
         ticketsHistory = data.tickets || [];
@@ -904,22 +554,16 @@
             return `<div class="history-card"><div class="card-header"><span>#${t.ticket_id}</span><span>${new Date(t.date).toLocaleString()}</span></div><div><strong>${t.draw_name}</strong> - ${t.total_amount} G ${win>0 ? `<span class="profit">+${win} G</span>` : ''}</div><div class="footer"><span class="badge ${win>0?'badge-win':'badge-lost'}">${status}</span><div class="action-buttons"><button class="btn-small" onclick="viewTicketDetails('${t.id}')">Détails</button><button class="btn-small" onclick="reprintTicket('${t.id}')">Impression</button><button class="btn-small" onclick="replayTicket('${t.id}')">Rejouer</button></div></div></div>`;
         }).join('');
     }
-
-    function viewTicketDetails(id) {
-        const t = ticketsHistory.find(t=>t.id==id);
-        if(!t) return;
-        alert(`Ticket #${t.ticket_id}\nTirage: ${t.draw_name}\nTotal: ${t.total_amount} G\nGain: ${t.win_amount||0} G\nStatut: ${t.checked?'Traité':'En attente'}`);
-    }
+    
+    function viewTicketDetails(id) { const t = ticketsHistory.find(t=>t.id==id); if(t) alert(`Ticket #${t.ticket_id}\n${t.draw_name}\nTotal: ${t.total_amount} G\nGain: ${t.win_amount||0} G`); }
     function reprintTicket(id) {
-        const t = ticketsHistory.find(t=>t.id==id);
-        if(!t) return;
+        const t = ticketsHistory.find(t=>t.id==id); if(!t) return;
         const win = window.open('','_blank','width=500,height=700');
         win.document.write(`<html><head><title>Ticket</title><style>body{font-family:monospace;padding:10px;}</style></head><body><h3>${lotterySettings.name||'LOTATO'}</h3><p>Ticket #${t.ticket_id}<br>${t.draw_name}<br>${new Date(t.date).toLocaleString()}<br>Total: ${t.total_amount} G</p><hr><pre>${JSON.stringify(t.bets,null,2)}</pre><button onclick="window.print()">Imprimer</button></body></html>`);
         win.document.close();
     }
     async function replayTicket(id) {
-        const t = ticketsHistory.find(t=>t.id==id);
-        if(!t) return;
+        const t = ticketsHistory.find(t=>t.id==id); if(!t) return;
         let bets = [];
         if(Array.isArray(t.bets)) bets = t.bets;
         else if(typeof t.bets === 'string') try{ bets = JSON.parse(t.bets); }catch(e){}
@@ -928,8 +572,7 @@
         alert('Ticket rechargé dans le panier');
         switchTab('play');
     }
-
-    // ==================== TRANSACTIONS & RECHARGE ====================
+    
     async function loadTransactions() {
         const data = await fetchAPI('/player/transactions');
         const list = data.transactions || [];
@@ -937,6 +580,7 @@
         if(!list.length) { container.innerHTML = '<div>Aucune transaction</div>'; return; }
         container.innerHTML = list.map(t => `<div class="transaction-item"><span>${new Date(t.created_at).toLocaleString()}</span><span class="${t.type==='deposit'?'profit':'loss'}">${t.type==='deposit'?'+':'-'} ${t.amount} G</span><span>${t.description||t.type}</span></div>`).join('');
     }
+    
     async function loadWins() {
         const data = await fetchAPI('/player/tickets');
         const wins = (data.tickets||[]).filter(t => parseFloat(t.win_amount)>0);
@@ -944,6 +588,7 @@
         if(!wins.length) { container.innerHTML = '<div>Aucun gain</div>'; return; }
         container.innerHTML = wins.map(t => `<div class="history-item"><div><strong>${t.draw_name}</strong><br>${new Date(t.date).toLocaleString()}</div><div class="profit">+ ${parseFloat(t.win_amount).toLocaleString()} G</div></div>`).join('');
     }
+    
     function showRechargeOptions() { const div=document.getElementById('recharge-options'); div.style.display=div.style.display==='none'?'block':'none'; }
     async function useRechargeCode() {
         const code = document.getElementById('recharge-code').value;
@@ -953,8 +598,7 @@
         else alert(res.error||'Code invalide');
     }
     function rechargeWith(method) { alert(`Redirection vers ${method}... (à intégrer)`); }
-
-    // ==================== UI ====================
+    
     function setupTabs() {
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', () => {
@@ -970,8 +614,22 @@
         });
     }
     function switchTab(tabName) { document.querySelector(`.tab[data-tab="${tabName}"]`).click(); }
-
-    // Exposer globalement
+    
+    async function initPlayerInterface() {
+        await loadDraws();
+        await updateBalance();
+        await loadSettingsAndAds();
+        await loadLimitsAndBlocks();
+        await loadHistory();
+        await loadTransactions();
+        await loadWins();
+        setupTabs();
+        document.getElementById('add-bet-btn').addEventListener('click', addBet);
+        document.getElementById('amt-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') addBet(); });
+        document.getElementById('history-search').addEventListener('input', (e) => { historySearchTerm = e.target.value; renderHistoryList(); });
+    }
+    
+    // Exposer les fonctions globales nécessaires
     window.selectDraw = selectDraw; window.selectMainGame = selectMainGame; window.toggleNumericChips = toggleNumericChips;
     window.selectGame = selectGame; window.toggleLottoOption = toggleLottoOption; window.addBet = addBet;
     window.removeBet = removeBet; window.validateTicket = validateTicket; window.showRechargeOptions = showRechargeOptions;
