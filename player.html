@@ -9,94 +9,96 @@
     <style>
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; }
         body { background:#0a0b1e; color:#fff; }
-        .app { max-width:500px; margin:0 auto; background:#0f1122; min-height:100vh; position:relative; }
-        header { background:linear-gradient(135deg,#1a1c3a,#0f1122); padding:15px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); }
-        .logo h1 { font-size:1.3rem; background:linear-gradient(135deg,#ad00f1,#ff007a); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-        .balance { background:rgba(0,241,144,0.2); padding:5px 12px; border-radius:20px; font-size:0.9rem; font-weight:bold; }
-        .tabs { display:flex; background:#1a1c3a; padding:10px; gap:5px; }
-        .tab { flex:1; background:rgba(255,255,255,0.05); border:none; padding:12px; border-radius:12px; color:#fff; font-weight:600; cursor:pointer; text-align:center; }
+        .app { max-width:500px; margin:0 auto; background:#0f1122; min-height:100vh; }
+        header { background:linear-gradient(135deg,#1a1c3a,#0f1122); padding:12px 16px; display:flex; justify-content:space-between; align-items:center; }
+        .logo h1 { font-size:1.2rem; background:linear-gradient(135deg,#ad00f1,#ff007a); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .balance { background:rgba(0,241,144,0.2); padding:4px 10px; border-radius:20px; font-size:0.8rem; font-weight:bold; }
+        .tabs { display:flex; background:#1a1c3a; padding:8px; gap:5px; position:sticky; top:0; z-index:10; }
+        .tab { flex:1; background:rgba(255,255,255,0.05); border:none; padding:10px; border-radius:12px; color:#fff; font-weight:600; cursor:pointer; text-align:center; font-size:0.9rem; }
         .tab.active { background:linear-gradient(135deg,#ad00f1,#00d4ff); }
-        .tab-content { display:none; padding:20px; padding-bottom:80px; }
+        .tab-content { display:none; padding:15px; padding-bottom:70px; }
         .tab-content.active { display:block; }
-        .section-title { font-size:1.2rem; margin-bottom:15px; display:flex; align-items:center; gap:8px; }
-        .draw-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:20px; }
-        .draw-card { background:rgba(255,255,255,0.05); border-radius:16px; padding:12px; text-align:center; cursor:pointer; border:1px solid transparent; }
+        .section-title { font-size:1.1rem; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+        .draw-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:20px; }
+        .draw-card { background:rgba(255,255,255,0.05); border-radius:14px; padding:10px; text-align:center; cursor:pointer; border:1px solid transparent; }
         .draw-card.selected { border-color:#00d4ff; background:rgba(0,212,255,0.1); }
         .draw-card.blocked { opacity:0.5; cursor:not-allowed; }
-        .game-selector { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px; }
-        .chip { background:rgba(255,255,255,0.1); border:none; padding:8px 16px; border-radius:30px; color:#fff; cursor:pointer; }
+        .draw-name { font-weight:600; font-size:0.9rem; }
+        .draw-time { font-size:0.75rem; color:#aaa; }
+        .game-selector { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+        .chip { background:rgba(255,255,255,0.1); border:none; padding:6px 14px; border-radius:30px; color:#fff; cursor:pointer; font-size:0.8rem; }
         .chip.active { background:linear-gradient(135deg,#ad00f1,#00d4ff); }
-        .numeric-chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:15px; display:none; }
+        .numeric-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; display:none; }
         .numeric-chips.visible { display:flex; }
-        .lotto-games, .special-games { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px; display:none; }
+        .lotto-games, .special-games { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; display:none; }
         .lotto-games.visible, .special-games.visible { display:flex; }
-        .sub-game-btn { background:rgba(255,255,255,0.1); border:none; padding:6px 14px; border-radius:30px; color:#fff; cursor:pointer; }
-        .lotto-options { display:flex; gap:10px; margin:10px 0; flex-wrap:wrap; }
-        .option-chip { background:rgba(255,255,255,0.1); padding:5px 12px; border-radius:20px; cursor:pointer; display:flex; align-items:center; gap:5px; }
+        .sub-game-btn { background:rgba(255,255,255,0.1); border:none; padding:5px 12px; border-radius:30px; color:#fff; cursor:pointer; font-size:0.75rem; }
+        .lotto-options { display:flex; gap:8px; margin:8px 0; flex-wrap:wrap; }
+        .option-chip { background:rgba(255,255,255,0.1); padding:4px 10px; border-radius:20px; cursor:pointer; display:flex; align-items:center; gap:5px; font-size:0.75rem; }
         .option-chip.active { background:#00d4ff; color:#000; }
-        .input-container { display:flex; gap:10px; margin:20px 0; }
-        .input-container input { flex:1; padding:12px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#fff; text-align:center; }
-        .add-btn { background:linear-gradient(135deg,#ad00f1,#00d4ff); border:none; padding:12px 20px; border-radius:12px; color:#fff; font-weight:bold; cursor:pointer; }
-        .cart-section { background:rgba(255,255,255,0.02); border-radius:20px; padding:15px; margin-top:20px; }
-        .cart-header { display:flex; justify-content:space-between; margin-bottom:10px; }
-        .cart-list { max-height:300px; overflow-y:auto; }
-        .cart-item { display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid rgba(255,255,255,0.05); }
-        .cart-item button { background:#ff4d4d; border:none; color:#fff; width:24px; height:24px; border-radius:50%; cursor:pointer; }
-        .print-btn { background:#00d4ff; border:none; padding:10px; border-radius:30px; color:#000; font-weight:bold; width:100%; margin-top:10px; cursor:pointer; }
-        .history-item, .transaction-item { display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid rgba(255,255,255,0.05); }
+        .input-container { display:flex; gap:8px; margin:15px 0; align-items:center; }
+        .input-container input { flex:1; padding:10px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#fff; text-align:center; font-size:0.9rem; }
+        .input-container input#num-input { max-width:80px; }
+        .input-container input#amt-input { max-width:100px; }
+        .add-btn { background:linear-gradient(135deg,#ad00f1,#00d4ff); border:none; padding:10px 18px; border-radius:12px; color:#fff; font-weight:bold; cursor:pointer; font-size:0.9rem; }
+        .cart-section { background:rgba(255,255,255,0.02); border-radius:16px; padding:12px; margin-top:15px; }
+        .cart-header { display:flex; justify-content:space-between; margin-bottom:8px; font-weight:600; }
+        .cart-list { max-height:250px; overflow-y:auto; }
+        .cart-item { display:flex; justify-content:space-between; padding:6px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:0.8rem; }
+        .cart-item button { background:#ff4d4d; border:none; color:#fff; width:22px; height:22px; border-radius:50%; cursor:pointer; }
+        .print-btn { background:#00d4ff; border:none; padding:8px; border-radius:30px; color:#000; font-weight:bold; width:100%; margin-top:8px; cursor:pointer; }
+        .history-item, .transaction-item { display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:0.8rem; }
         .profit { color:#00f190; }
         .loss { color:#ff4d4d; }
-        .recharge-btn { background:rgba(0,212,255,0.2); border:1px solid #00d4ff; padding:12px; border-radius:12px; width:100%; margin-bottom:10px; text-align:center; cursor:pointer; }
-        .code-input { display:flex; gap:10px; margin-top:10px; }
-        .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:1000; }
-        .modal-content { background:#1e1f3a; border-radius:20px; padding:20px; width:80%; max-width:350px; text-align:center; }
-        .carousel { position:relative; width:100%; overflow:hidden; margin-bottom:20px; border-radius:16px; background:rgba(0,0,0,0.3); }
-        .carousel-inner { display:flex; transition:transform 0.5s ease; }
-        .carousel-item { flex:0 0 100%; }
-        .carousel-item img { width:100%; height:150px; object-fit:cover; }
-        .carousel-btn { position:absolute; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.5); color:white; border:none; padding:10px; cursor:pointer; z-index:10; }
-        .carousel-btn.prev { left:10px; }
-        .carousel-btn.next { right:10px; }
-        .announcement-bar { background:rgba(255,193,7,0.2); border-left:4px solid #ffc107; padding:10px; margin-bottom:15px; border-radius:8px; font-size:0.9rem; }
-        .search-bar { padding:10px 15px; background:#1a1c3a; border-bottom:1px solid rgba(255,255,255,0.1); }
-        .search-bar input { width:100%; padding:12px 15px; border:none; border-radius:30px; background:#0f1122; color:#fff; outline:none; }
-        .badge { padding:4px 12px; border-radius:20px; font-size:0.75rem; font-weight:bold; }
+        .recharge-btn { background:rgba(0,212,255,0.2); border:1px solid #00d4ff; padding:10px; border-radius:12px; width:100%; margin-bottom:8px; text-align:center; cursor:pointer; font-size:0.9rem; }
+        .code-input { display:flex; gap:8px; margin-top:8px; }
+        .search-bar { padding:8px; background:#1a1c3a; margin-bottom:10px; border-radius:20px; }
+        .search-bar input { width:100%; padding:8px 12px; border:none; border-radius:30px; background:#0f1122; color:#fff; outline:none; font-size:0.8rem; }
+        .badge { padding:3px 10px; border-radius:20px; font-size:0.7rem; font-weight:bold; display:inline-block; }
         .badge-win { background:#00f190; color:#000; }
         .badge-lost { background:#ff4d4d; color:#fff; }
-        .action-buttons { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
-        .btn-small { background:rgba(255,255,255,0.1); border:none; padding:4px 10px; border-radius:20px; color:#fff; cursor:pointer; font-size:0.7rem; }
-        .history-card { background:rgba(255,255,255,0.03); border-radius:16px; padding:12px; margin-bottom:12px; }
-        .card-header { display:flex; justify-content:space-between; margin-bottom:8px; }
-        .footer { margin-top:10px; }
+        .badge-wait { background:#ffc107; color:#000; }
+        .action-buttons { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+        .btn-small { background:rgba(255,255,255,0.1); border:none; padding:3px 8px; border-radius:20px; color:#fff; cursor:pointer; font-size:0.7rem; }
+        .history-card { background:rgba(255,255,255,0.03); border-radius:14px; padding:10px; margin-bottom:10px; }
+        .card-header { display:flex; justify-content:space-between; margin-bottom:6px; font-size:0.7rem; color:#aaa; }
+        .carousel { position:relative; width:100%; overflow:hidden; margin-bottom:15px; border-radius:12px; }
+        .carousel-inner { display:flex; transition:transform 0.5s ease; }
+        .carousel-item { flex:0 0 100%; }
+        .carousel-item img { width:100%; height:120px; object-fit:cover; }
+        .carousel-btn { position:absolute; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.5); color:white; border:none; padding:5px 10px; cursor:pointer; font-size:1rem; }
+        .announcement-bar { background:rgba(255,193,7,0.2); border-left:4px solid #ffc107; padding:8px; margin-bottom:12px; border-radius:6px; font-size:0.8rem; }
+        .login-container { display:flex; flex-direction:column; justify-content:center; min-height:100vh; padding:20px; background:#0a0b1e; }
+        .login-card { background:rgba(255,255,255,0.05); border-radius:30px; padding:25px; text-align:center; }
+        .login-card input { width:100%; padding:10px; margin:8px 0; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#fff; }
+        .toggle-link { color:#00d4ff; cursor:pointer; margin-top:12px; display:inline-block; font-size:0.8rem; }
     </style>
 </head>
 <body>
 <div id="app">
-    <!-- L'écran de connexion/inscription sera masqué si déjà connecté -->
-    <div id="auth-container" style="display:none;">
-        <div class="login-container" style="display:flex; flex-direction:column; justify-content:center; min-height:100vh; padding:20px; background:#0a0b1e;">
-            <div class="login-card" style="background:rgba(255,255,255,0.05); border-radius:30px; padding:30px; text-align:center;">
-                <h1>LOTATO PRO</h1>
-                <h2 id="auth-title">Connexion</h2>
-                <div id="auth-message" style="color:#ff4d4d; margin-top:10px;"></div>
-                <form id="login-form">
-                    <input type="tel" id="login-phone" placeholder="Téléphone" required style="width:100%; padding:12px; margin:10px 0; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#fff;">
-                    <input type="password" id="login-password" placeholder="Mot de passe" required style="width:100%; padding:12px; margin:10px 0; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#fff;">
-                    <button type="submit" class="add-btn" style="width:100%;">Se connecter</button>
-                </form>
-                <form id="register-form" style="display:none;">
-                    <input type="text" id="reg-name" placeholder="Nom complet" required style="width:100%; padding:12px; margin:10px 0; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#fff;">
-                    <input type="tel" id="reg-phone" placeholder="Téléphone" required style="width:100%; padding:12px; margin:10px 0; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#fff;">
-                    <input type="password" id="reg-password" placeholder="Mot de passe" required style="width:100%; padding:12px; margin:10px 0; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#fff;">
-                    <input type="text" id="reg-zone" placeholder="Zone (optionnel)" style="width:100%; padding:12px; margin:10px 0; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#fff;">
-                    <button type="submit" class="add-btn" style="width:100%;">S'inscrire</button>
-                </form>
-                <div><span id="toggle-auth" style="color:#00d4ff; cursor:pointer;">Pas de compte ? Créer un compte</span></div>
-            </div>
+    <!-- Login/Register (affiché si non connecté) -->
+    <div id="auth-container" style="display:flex; flex-direction:column; justify-content:center; min-height:100vh; padding:20px; background:#0a0b1e;">
+        <div class="login-card">
+            <h1>LOTATO PRO</h1>
+            <h2 id="auth-title">Connexion</h2>
+            <div id="auth-message" style="color:#ff4d4d; margin-top:8px;"></div>
+            <form id="login-form">
+                <input type="tel" id="login-phone" placeholder="Téléphone" required>
+                <input type="password" id="login-password" placeholder="Mot de passe" required>
+                <button type="submit" class="add-btn" style="width:100%;">Se connecter</button>
+            </form>
+            <form id="register-form" style="display:none;">
+                <input type="text" id="reg-name" placeholder="Nom complet" required>
+                <input type="tel" id="reg-phone" placeholder="Téléphone" required>
+                <input type="password" id="reg-password" placeholder="Mot de passe (min 4)" required>
+                <input type="text" id="reg-zone" placeholder="Zone (optionnel)">
+                <button type="submit" class="add-btn" style="width:100%;">S'inscrire</button>
+            </form>
+            <div><span id="toggle-auth" class="toggle-link">Pas de compte ? Créer un compte</span></div>
         </div>
     </div>
 
-    <!-- Interface principale joueur -->
+    <!-- Dashboard joueur (caché initialement) -->
     <div id="dashboard-container" style="display:none;">
         <header>
             <div class="logo"><h1 id="lottery-name">LOTATO PRO</h1></div>
@@ -113,14 +115,14 @@
         <div class="tabs">
             <button class="tab active" data-tab="play">🎲 Jouer</button>
             <button class="tab" data-tab="history">📜 Historique</button>
-            <button class="tab" data-tab="recharge">💰 Recharger</button>
+            <button class="tab" data-tab="recharge">💰 Recharge</button>
             <button class="tab" data-tab="wins">🏆 Gains</button>
         </div>
 
-        <!-- Jouer -->
+        <!-- Onglet Jouer -->
         <div id="play-tab" class="tab-content active">
-            <div class="section-title">📅 Choisissez un tirage</div>
-            <div class="draw-grid" id="draws-container"></div>
+            <div class="section-title">📅 Tirage</div>
+            <div class="draw-grid" id="draws-container">Chargement...</div>
 
             <div class="section-title">🎮 Type de jeu</div>
             <div class="game-selector" id="game-types">
@@ -130,23 +132,18 @@
                 <button class="chip" id="toggle-nx-btn" onclick="toggleNumericChips()">NX</button>
             </div>
             <div id="numeric-chips" class="numeric-chips">
-                <button class="chip numeric-chip" onclick="selectGame('n0')">N0</button>
-                <button class="chip numeric-chip" onclick="selectGame('n1')">N1</button>
-                <button class="chip numeric-chip" onclick="selectGame('n2')">N2</button>
-                <button class="chip numeric-chip" onclick="selectGame('n3')">N3</button>
-                <button class="chip numeric-chip" onclick="selectGame('n4')">N4</button>
-                <button class="chip numeric-chip" onclick="selectGame('n5')">N5</button>
-                <button class="chip numeric-chip" onclick="selectGame('n6')">N6</button>
-                <button class="chip numeric-chip" onclick="selectGame('n7')">N7</button>
-                <button class="chip numeric-chip" onclick="selectGame('n8')">N8</button>
-                <button class="chip numeric-chip" onclick="selectGame('n9')">N9</button>
+                <button class="chip numeric-chip" onclick="selectGame('n0')">N0</button><button class="chip numeric-chip" onclick="selectGame('n1')">N1</button>
+                <button class="chip numeric-chip" onclick="selectGame('n2')">N2</button><button class="chip numeric-chip" onclick="selectGame('n3')">N3</button>
+                <button class="chip numeric-chip" onclick="selectGame('n4')">N4</button><button class="chip numeric-chip" onclick="selectGame('n5')">N5</button>
+                <button class="chip numeric-chip" onclick="selectGame('n6')">N6</button><button class="chip numeric-chip" onclick="selectGame('n7')">N7</button>
+                <button class="chip numeric-chip" onclick="selectGame('n8')">N8</button><button class="chip numeric-chip" onclick="selectGame('n9')">N9</button>
             </div>
             <div id="lotto-games" class="lotto-games">
                 <button class="sub-game-btn" onclick="selectGame('lotto3')">Lotto 3</button>
                 <button class="sub-game-btn" onclick="selectGame('lotto4')">Lotto 4</button>
                 <button class="sub-game-btn" onclick="selectGame('lotto5')">Lotto 5</button>
-                <button class="sub-game-btn" onclick="selectGame('auto_lotto4')">Lotto 4 Auto</button>
-                <button class="sub-game-btn" onclick="selectGame('auto_lotto5')">Lotto 5 Auto</button>
+                <button class="sub-game-btn" onclick="selectGame('auto_lotto4')">Lotto4 Auto</button>
+                <button class="sub-game-btn" onclick="selectGame('auto_lotto5')">Lotto5 Auto</button>
             </div>
             <div id="special-games" class="special-games">
                 <button class="sub-game-btn" onclick="selectGame('bo')">BO</button>
@@ -155,20 +152,19 @@
                 <button class="sub-game-btn" onclick="selectGame('auto_marriage')">Mariage Auto</button>
             </div>
             <div id="lotto4-options" class="lotto-options" style="display:none;">
-                <div class="option-chip" data-option="1" onclick="toggleLottoOption(4,1)"><input type="checkbox" checked> Option 1</div>
-                <div class="option-chip" data-option="2" onclick="toggleLottoOption(4,2)"><input type="checkbox" checked> Option 2</div>
-                <div class="option-chip" data-option="3" onclick="toggleLottoOption(4,3)"><input type="checkbox" checked> Option 3</div>
+                <div class="option-chip" data-option="1" onclick="toggleLottoOption(4,1)"><input type="checkbox" checked> Option1</div>
+                <div class="option-chip" data-option="2" onclick="toggleLottoOption(4,2)"><input type="checkbox" checked> Option2</div>
+                <div class="option-chip" data-option="3" onclick="toggleLottoOption(4,3)"><input type="checkbox" checked> Option3</div>
             </div>
             <div id="lotto5-options" class="lotto-options" style="display:none;">
-                <div class="option-chip" data-option="1" onclick="toggleLottoOption(5,1)"><input type="checkbox" checked> Option 1</div>
-                <div class="option-chip" data-option="2" onclick="toggleLottoOption(5,2)"><input type="checkbox" checked> Option 2</div>
-                <div class="option-chip" data-option="3" onclick="toggleLottoOption(5,3)"><input type="checkbox" checked> Option 3</div>
+                <div class="option-chip" data-option="1" onclick="toggleLottoOption(5,1)"><input type="checkbox" checked> Option1</div>
+                <div class="option-chip" data-option="2" onclick="toggleLottoOption(5,2)"><input type="checkbox" checked> Option2</div>
+                <div class="option-chip" data-option="3" onclick="toggleLottoOption(5,3)"><input type="checkbox" checked> Option3</div>
             </div>
 
-            <div class="section-title">🎲 Votre pari</div>
             <div class="input-container">
-                <input type="text" id="num-input" placeholder="00" maxlength="5">
-                <input type="number" id="amt-input" placeholder="Montant (G)" step="1" min="1">
+                <input type="text" id="num-input" placeholder="00" maxlength="5" style="flex:0.5;">
+                <input type="number" id="amt-input" placeholder="Montant" step="1" min="1" style="flex:0.5;">
                 <button id="add-bet-btn" class="add-btn"><i class="fas fa-plus"></i></button>
             </div>
 
@@ -188,12 +184,12 @@
         <!-- Recharge -->
         <div id="recharge-tab" class="tab-content">
             <button class="recharge-btn" onclick="showRechargeOptions()">💵 Recharger mon compte</button>
-            <div id="recharge-options" style="display:none; margin-top:15px;">
-                <button class="recharge-btn" onclick="rechargeWith('moncash')">MonCash</button>
-                <button class="recharge-btn" onclick="rechargeWith('natcash')">NatCash</button>
+            <div id="recharge-options" style="display:none; margin-top:12px;">
+                <button class="recharge-btn" onclick="rechargeWith('moncash')">MonCash (bientôt)</button>
+                <button class="recharge-btn" onclick="rechargeWith('natcash')">NatCash (bientôt)</button>
                 <div class="code-input"><input type="text" id="recharge-code" placeholder="Code de recharge"><button class="add-btn" onclick="useRechargeCode()">Utiliser code</button></div>
             </div>
-            <div id="transactions-container" style="margin-top:20px;"><h3>Dernières transactions</h3><div id="transactions-list"></div></div>
+            <div style="margin-top:20px;"><h3>📋 Dernières transactions</h3><div id="transactions-list"></div></div>
         </div>
 
         <!-- Gains -->
@@ -206,26 +202,22 @@
 <script>
     // ==================== CONFIGURATION ====================
     const API_BASE = 'https://lotato-lsvu.onrender.com/api';
-    
-    // Récupération du token (peu importe la clé utilisée)
     let authToken = localStorage.getItem('player_token') || localStorage.getItem('auth_token');
     let playerId = localStorage.getItem('player_id');
     let playerName = localStorage.getItem('player_name');
     
-    // Si pas de token, on affiche l'écran de connexion/inscription
+    // Gestion de l'affichage login/dashboard
     if (!authToken || !playerId) {
-        // Afficher le formulaire d'auth
-        document.getElementById('auth-container').style.display = 'block';
+        document.getElementById('auth-container').style.display = 'flex';
         document.getElementById('dashboard-container').style.display = 'none';
     } else {
-        // Déjà connecté : charger l'interface directement
         document.getElementById('auth-container').style.display = 'none';
         document.getElementById('dashboard-container').style.display = 'block';
         document.getElementById('player-name').innerText = playerName;
         initPlayerInterface();
     }
     
-    // Gestion des formulaires d'authentification (pour ceux qui ne sont pas encore connectés)
+    // ==================== AUTHENTIFICATION (pour ceux qui ne sont pas connectés) ====================
     document.getElementById('toggle-auth').addEventListener('click', () => {
         const loginForm = document.getElementById('login-form');
         const registerForm = document.getElementById('register-form');
@@ -259,7 +251,7 @@
                 localStorage.setItem('player_token', data.token);
                 localStorage.setItem('player_id', data.playerId);
                 localStorage.setItem('player_name', data.name);
-                window.location.reload(); // Recharge pour afficher l'interface
+                window.location.reload();
             } else {
                 msg.innerText = data.error || 'Identifiants incorrects';
             }
@@ -291,7 +283,7 @@
         } catch(err) { msg.innerText = 'Erreur réseau'; }
     });
     
-    // ==================== FONCTIONS PRINCIPALES (joueur) ====================
+    // ==================== FONCTIONS PRINCIPALES JOUEUR ====================
     let balance = 0;
     let draws = [];
     let currentDrawId = null;
@@ -322,55 +314,69 @@
     }
     
     async function updateBalance() {
-        const data = await fetchAPI('/player/balance');
-        balance = data.balance;
-        document.getElementById('balance-display').innerHTML = balance.toLocaleString() + ' G';
+        try {
+            const data = await fetchAPI('/player/balance');
+            balance = data.balance;
+            document.getElementById('balance-display').innerHTML = balance.toLocaleString() + ' G';
+        } catch(e) { console.error(e); }
     }
     
     async function loadDraws() {
-        const data = await fetchAPI('/draws');
-        draws = data.draws || [];
-        if (draws.length) currentDrawId = draws[0].id;
-        renderDraws();
+        try {
+            const data = await fetchAPI('/draws');
+            draws = data.draws || [];
+            if (draws.length === 0) {
+                document.getElementById('draws-container').innerHTML = '<div class="draw-card">Aucun tirage</div>';
+                return;
+            }
+            if (!currentDrawId || !draws.find(d=>d.id==currentDrawId)) currentDrawId = draws[0].id;
+            renderDraws();
+        } catch(e) { console.error(e); document.getElementById('draws-container').innerHTML = '<div>Erreur chargement tirages</div>'; }
     }
     
     function renderDraws() {
         const container = document.getElementById('draws-container');
-        if (!draws.length) { container.innerHTML = '<div>Aucun tirage</div>'; return; }
         container.innerHTML = draws.map(d => `
             <div class="draw-card ${currentDrawId === d.id ? 'selected' : ''} ${!d.active ? 'blocked' : ''}" onclick="${d.active ? `selectDraw(${d.id})` : ''}">
-                <div>${d.name}</div>
-                <div style="font-size:0.8rem;">${d.time}</div>
-                ${!d.active ? '<div style="color:#ff4d4d;">Fermé</div>' : ''}
+                <div class="draw-name">${d.name}</div>
+                <div class="draw-time">${d.time}</div>
+                ${!d.active ? '<div style="color:#ff4d4d; font-size:0.7rem;">Fermé</div>' : ''}
             </div>
         `).join('');
     }
     
-    function selectDraw(id) { currentDrawId = id; renderDraws(); }
+    function selectDraw(id) {
+        currentDrawId = id;
+        renderDraws();
+    }
     
     async function loadLimitsAndBlocks() {
-        const data = await fetchAPI('/player/limits');
-        globalBlockedNumbers = data.globalBlocked || [];
-        drawBlockedNumbers = {};
-        (data.drawBlocked || []).forEach(db => { if(!drawBlockedNumbers[db.draw_id]) drawBlockedNumbers[db.draw_id]=[]; drawBlockedNumbers[db.draw_id].push(db.number); });
-        numberLimits = {};
-        (data.globalLimits || []).forEach(l => { numberLimits[`${currentDrawId}_${l.number}`] = l.limit_amount; });
-        (data.drawLimits || []).forEach(l => { numberLimits[`${l.draw_id}_${l.number}`] = l.limit_amount; });
+        try {
+            const data = await fetchAPI('/player/limits');
+            globalBlockedNumbers = data.globalBlocked || [];
+            drawBlockedNumbers = {};
+            (data.drawBlocked || []).forEach(db => { if(!drawBlockedNumbers[db.draw_id]) drawBlockedNumbers[db.draw_id]=[]; drawBlockedNumbers[db.draw_id].push(db.number); });
+            numberLimits = {};
+            (data.globalLimits || []).forEach(l => { numberLimits[`${currentDrawId}_${l.number}`] = l.limit_amount; });
+            (data.drawLimits || []).forEach(l => { numberLimits[`${l.draw_id}_${l.number}`] = l.limit_amount; });
+        } catch(e) { console.error(e); }
     }
     
     async function loadSettingsAndAds() {
-        const data = await fetchAPI('/player/settings');
-        lotterySettings = data;
-        document.getElementById('lottery-name').innerHTML = data.name || 'LOTATO PRO';
-        carouselImages = data.adsImages || [];
-        if (carouselImages.length) {
-            const inner = document.getElementById('carousel-inner');
-            inner.innerHTML = carouselImages.map(img => `<div class="carousel-item"><img src="${img}" alt="pub"></div>`).join('');
-            document.getElementById('carousel').style.display = 'block';
-            startCarousel();
-        }
-        const ann = data.announcements;
-        if (ann) { document.getElementById('announcement-bar').innerHTML = `<i class="fas fa-bullhorn"></i> ${ann}`; document.getElementById('announcement-bar').style.display = 'block'; }
+        try {
+            const data = await fetchAPI('/player/settings');
+            lotterySettings = data;
+            document.getElementById('lottery-name').innerHTML = data.name || 'LOTATO PRO';
+            carouselImages = data.adsImages || [];
+            if (carouselImages.length) {
+                const inner = document.getElementById('carousel-inner');
+                inner.innerHTML = carouselImages.map(img => `<div class="carousel-item"><img src="${img}" alt="pub"></div>`).join('');
+                document.getElementById('carousel').style.display = 'block';
+                startCarousel();
+            }
+            const ann = data.announcements;
+            if (ann) { document.getElementById('announcement-bar').innerHTML = `<i class="fas fa-bullhorn"></i> ${ann}`; document.getElementById('announcement-bar').style.display = 'block'; }
+        } catch(e) { console.error(e); }
     }
     
     function startCarousel() { if(carouselImages.length>1) setInterval(()=>nextSlide(),5000); }
@@ -431,7 +437,7 @@
     }
     
     function addBet() {
-        if (!currentDrawId) { alert('Choisissez un tirage'); return; }
+        if (!currentDrawId) { alert('Choisissez un tirage d\'abord'); return; }
         const amt = parseFloat(document.getElementById('amt-input').value);
         if (isNaN(amt) || amt <= 0) { alert('Montant invalide'); return; }
         if (amt > balance) { alert('Solde insuffisant'); return; }
@@ -482,7 +488,7 @@
             renderCart(); document.getElementById('amt-input').value=''; return;
         }
         
-        // Vérifications limites
+        // Vérifications limites et blocage
         if (isNumberBlocked(cleanNum, currentDrawId)) { alert(`Numéro ${cleanNum} bloqué`); return; }
         if (!checkNumberLimit(cleanNum, currentDrawId, amt)) { alert(`Limite dépassée pour ${cleanNum}`); return; }
         
@@ -536,10 +542,13 @@
     }
     
     async function loadHistory() {
-        const data = await fetchAPI('/player/tickets');
-        ticketsHistory = data.tickets || [];
-        renderHistoryList();
+        try {
+            const data = await fetchAPI('/player/tickets');
+            ticketsHistory = data.tickets || [];
+            renderHistoryList();
+        } catch(e) { console.error(e); document.getElementById('history-container').innerHTML = '<div>Erreur chargement historique</div>'; }
     }
+    
     function renderHistoryList() {
         const container = document.getElementById('history-container');
         let filtered = ticketsHistory.filter(t => {
@@ -551,7 +560,17 @@
         container.innerHTML = filtered.map(t => {
             const win = parseFloat(t.win_amount || 0);
             const status = t.checked ? (win>0 ? 'GANYEN' : 'PERDU') : 'EN ATTENTE';
-            return `<div class="history-card"><div class="card-header"><span>#${t.ticket_id}</span><span>${new Date(t.date).toLocaleString()}</span></div><div><strong>${t.draw_name}</strong> - ${t.total_amount} G ${win>0 ? `<span class="profit">+${win} G</span>` : ''}</div><div class="footer"><span class="badge ${win>0?'badge-win':'badge-lost'}">${status}</span><div class="action-buttons"><button class="btn-small" onclick="viewTicketDetails('${t.id}')">Détails</button><button class="btn-small" onclick="reprintTicket('${t.id}')">Impression</button><button class="btn-small" onclick="replayTicket('${t.id}')">Rejouer</button></div></div></div>`;
+            const statusClass = win>0 ? 'badge-win' : (t.checked ? 'badge-lost' : 'badge-wait');
+            return `<div class="history-card">
+                <div class="card-header"><span>#${t.ticket_id}</span><span>${new Date(t.date).toLocaleString()}</span></div>
+                <div><strong>${t.draw_name}</strong> - ${t.total_amount} G ${win>0 ? `<span class="profit">+${win} G</span>` : ''}</div>
+                <div class="footer"><span class="badge ${statusClass}">${status}</span>
+                <div class="action-buttons">
+                    <button class="btn-small" onclick="viewTicketDetails('${t.id}')">Détails</button>
+                    <button class="btn-small" onclick="reprintTicket('${t.id}')">Impression</button>
+                    <button class="btn-small" onclick="replayTicket('${t.id}')">Rejouer</button>
+                </div></div>
+            </div>`;
         }).join('');
     }
     
@@ -574,19 +593,23 @@
     }
     
     async function loadTransactions() {
-        const data = await fetchAPI('/player/transactions');
-        const list = data.transactions || [];
-        const container = document.getElementById('transactions-list');
-        if(!list.length) { container.innerHTML = '<div>Aucune transaction</div>'; return; }
-        container.innerHTML = list.map(t => `<div class="transaction-item"><span>${new Date(t.created_at).toLocaleString()}</span><span class="${t.type==='deposit'?'profit':'loss'}">${t.type==='deposit'?'+':'-'} ${t.amount} G</span><span>${t.description||t.type}</span></div>`).join('');
+        try {
+            const data = await fetchAPI('/player/transactions');
+            const list = data.transactions || [];
+            const container = document.getElementById('transactions-list');
+            if(!list.length) { container.innerHTML = '<div>Aucune transaction</div>'; return; }
+            container.innerHTML = list.map(t => `<div class="transaction-item"><span>${new Date(t.created_at).toLocaleString()}</span><span class="${t.type==='deposit'?'profit':'loss'}">${t.type==='deposit'?'+':'-'} ${t.amount} G</span><span>${t.description||t.type}</span></div>`).join('');
+        } catch(e) { console.error(e); }
     }
     
     async function loadWins() {
-        const data = await fetchAPI('/player/tickets');
-        const wins = (data.tickets||[]).filter(t => parseFloat(t.win_amount)>0);
-        const container = document.getElementById('wins-container');
-        if(!wins.length) { container.innerHTML = '<div>Aucun gain</div>'; return; }
-        container.innerHTML = wins.map(t => `<div class="history-item"><div><strong>${t.draw_name}</strong><br>${new Date(t.date).toLocaleString()}</div><div class="profit">+ ${parseFloat(t.win_amount).toLocaleString()} G</div></div>`).join('');
+        try {
+            const data = await fetchAPI('/player/tickets');
+            const wins = (data.tickets||[]).filter(t => parseFloat(t.win_amount)>0);
+            const container = document.getElementById('wins-container');
+            if(!wins.length) { container.innerHTML = '<div>Aucun gain</div>'; return; }
+            container.innerHTML = wins.map(t => `<div class="history-item"><div><strong>${t.draw_name}</strong><br>${new Date(t.date).toLocaleString()}</div><div class="profit">+ ${parseFloat(t.win_amount).toLocaleString()} G</div></div>`).join('');
+        } catch(e) { console.error(e); }
     }
     
     function showRechargeOptions() { const div=document.getElementById('recharge-options'); div.style.display=div.style.display==='none'?'block':'none'; }
@@ -597,7 +620,7 @@
         if(res.success) { alert(`Recharge de ${res.amount} G effectuée !`); await updateBalance(); await loadTransactions(); document.getElementById('recharge-code').value=''; }
         else alert(res.error||'Code invalide');
     }
-    function rechargeWith(method) { alert(`Redirection vers ${method}... (à intégrer)`); }
+    function rechargeWith(method) { alert(`Passerelle ${method} sera bientôt disponible.`); }
     
     function setupTabs() {
         document.querySelectorAll('.tab').forEach(tab => {
@@ -607,9 +630,9 @@
                 document.getElementById(`${tabId}-tab`).classList.add('active');
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
-                if(tabId==='history') loadHistory();
-                if(tabId==='recharge') loadTransactions();
-                if(tabId==='wins') loadWins();
+                if(tabId === 'history') loadHistory();
+                if(tabId === 'recharge') loadTransactions();
+                if(tabId === 'wins') loadWins();
             });
         });
     }
@@ -629,7 +652,7 @@
         document.getElementById('history-search').addEventListener('input', (e) => { historySearchTerm = e.target.value; renderHistoryList(); });
     }
     
-    // Exposer les fonctions globales nécessaires
+    // Exposer les fonctions globales
     window.selectDraw = selectDraw; window.selectMainGame = selectMainGame; window.toggleNumericChips = toggleNumericChips;
     window.selectGame = selectGame; window.toggleLottoOption = toggleLottoOption; window.addBet = addBet;
     window.removeBet = removeBet; window.validateTicket = validateTicket; window.showRechargeOptions = showRechargeOptions;
