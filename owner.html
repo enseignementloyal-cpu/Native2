@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LOTATO PRO - Propriétaire</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="config.js"></script>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
         body { background:#0a0b1e; color:#fff; padding:20px; }
@@ -33,7 +32,6 @@
         .image-preview { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
         .image-preview img { max-height:60px; border-radius:8px; }
         .remove-img { background:#ff4d4d; border:none; color:white; border-radius:20px; padding:2px 8px; margin-left:5px; cursor:pointer; }
-        .announcement-box { background:rgba(255,193,7,0.1); border-left:4px solid #ffc107; padding:10px; margin-bottom:15px; border-radius:8px; }
     </style>
 </head>
 <body>
@@ -116,7 +114,7 @@
         <div id="generated-code" class="code-display" style="display:none;"></div>
     </div>
 
-    <!-- Paramètres généraux (multiplicateurs) -->
+    <!-- Paramètres généraux -->
     <div id="settings-tab" class="tab-content">
         <div class="form-grid">
             <div class="form-group"><label>Nom de la borlette</label><input type="text" id="setting-name" placeholder="LOTATO PRO"></div>
@@ -142,7 +140,7 @@
             <button class="btn-primary" onclick="addAdImage()">Ajouter image</button>
         </div>
         <div id="ads-images-list" class="image-preview"></div>
-        <h3 style="margin-top:20px;">Annonce texte (s'affiche en haut)</h3>
+        <h3 style="margin-top:20px;">Annonce texte</h3>
         <div class="form-group"><textarea id="announcement-text" rows="3" placeholder="Annonce importante..."></textarea></div>
         <button class="btn-primary" onclick="saveAnnouncement()">Enregistrer annonce</button>
         <div id="ads-message" style="margin-top:10px;"></div>
@@ -150,49 +148,18 @@
 </div>
 
 <script>
+    const API_BASE = window.location.origin + '/api';
     let token = localStorage.getItem('auth_token');
 
-    (async function() {
-        if (!token) { window.location.href = 'index.html'; return; }
-        try {
-            const res = await fetch(`${API_CONFIG.BASE_URL}/auth/owner/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: 'admin', password: 'admin123' }) });
-            // Pour la démo, on utilise le login, mais normalement token déjà stocké. Ici simplifié.
-            // En réalité, le token est déjà dans localStorage après login.
-            // On va juste vérifier que le token fonctionne.
-            const test = await fetch(`${API_CONFIG.BASE_URL}/owner/stats`, { headers: { 'Authorization': `Bearer ${token}` } });
-            if (test.status === 401) throw new Error();
-            const user = await test.json();
-            document.getElementById('owner-name').innerText = 'Propriétaire';
-            loadDashboard();
-            loadDrawsList();
-            loadGlobalLimits();
-            loadBlockedNumbers();
-            loadSettings();
-            loadAdsSettings();
-        } catch(e) {
-            localStorage.removeItem('auth_token');
-            window.location.href = 'index.html';
-        }
-    })();
+    if (!token) window.location.href = 'index.html';
 
     async function fetchAPI(url, options = {}) {
-        const res = await fetch(`${API_CONFIG.BASE_URL}${url}`, {
+        const res = await fetch(`${API_BASE}${url}`, {
             ...options,
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', ...options.headers }
         });
         if (res.status === 401) { localStorage.removeItem('auth_token'); window.location.href = 'index.html'; throw new Error('Non authentifié'); }
         return res.json();
-    }
-
-    function switchTab(tab) {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        document.querySelector(`.tab[onclick*="${tab}"]`).classList.add('active');
-        document.getElementById(`${tab}-tab`).classList.add('active');
-        if (tab === 'dashboard') loadDashboard();
-        if (tab === 'draws') loadDrawsList();
-        if (tab === 'limits') { loadGlobalLimits(); loadBlockedNumbers(); }
-        if (tab === 'ads') loadAdsSettings();
     }
 
     async function loadDashboard() {
@@ -383,7 +350,29 @@
         else document.getElementById('ads-message').innerHTML = '<span style="color:red;">❌ Erreur</span>';
     }
 
+    function switchTab(tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelector(`.tab[onclick*="${tab}"]`).classList.add('active');
+        document.getElementById(`${tab}-tab`).classList.add('active');
+        if (tab === 'dashboard') loadDashboard();
+        if (tab === 'draws') loadDrawsList();
+        if (tab === 'limits') { loadGlobalLimits(); loadBlockedNumbers(); }
+        if (tab === 'ads') loadAdsSettings();
+    }
+
     function logout() { localStorage.clear(); window.location.href = 'index.html'; }
+
+    // Initialisation
+    (async function() {
+        document.getElementById('owner-name').innerText = 'Propriétaire';
+        await loadDashboard();
+        await loadDrawsList();
+        await loadGlobalLimits();
+        await loadBlockedNumbers();
+        await loadSettings();
+        await loadAdsSettings();
+    })();
 
     window.switchTab = switchTab;
     window.createDraw = createDraw;
@@ -399,6 +388,7 @@
     window.addAdImage = addAdImage;
     window.removeAdImage = removeAdImage;
     window.saveAnnouncement = saveAnnouncement;
+    window.logout = logout;
 </script>
 </body>
 </html>
