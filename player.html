@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>LOTATO · Espace Joueur</title>
+    <title>LOTATO PRO · Espace Joueur</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         body { background: #f1f5f9; color: #0f172a; padding-bottom: 80px; }
         .app { max-width: 550px; margin: 0 auto; background: white; min-height: 100vh; box-shadow: 0 0 20px rgba(0,0,0,0.05); }
-        .header { background: #0f172a; color: white; padding: 20px 20px 14px; position: sticky; top: 0; z-index: 20; }
+        .header { background: #0f172a; color: white; padding: 20px; position: sticky; top: 0; z-index: 20; }
         .header h1 { font-size: 1.5rem; font-weight: 600; }
         .balance-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.9rem; }
         .balance { background: #2d3a5e; padding: 4px 14px; border-radius: 40px; font-weight: 600; }
@@ -22,29 +24,32 @@
         .draws-scroll { display: flex; gap: 12px; overflow-x: auto; padding: 8px 0 16px; scrollbar-width: thin; }
         .draw-chip { background: #f1f5f9; border-radius: 60px; padding: 8px 20px; white-space: nowrap; font-weight: 500; cursor: pointer; border: 1px solid #e2e8f0; }
         .draw-chip.active { background: #3b82f6; color: white; border-color: #3b82f6; }
-        
+        .draw-chip.disabled { opacity: 0.6; text-decoration: line-through; cursor: not-allowed; }
+
         /* Catégories de jeux */
-        .game-category { margin-bottom: 15px; }
+        .game-category { margin-bottom: 20px; }
         .category-title { font-weight: 600; margin-bottom: 8px; font-size: 0.9rem; color: #334155; }
-        .sub-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; }
-        .game-btn, .sub-btn { background: #f1f5f9; border: 1px solid #e2e8f0; padding: 6px 14px; border-radius: 40px; font-size: 0.8rem; font-weight: 500; cursor: pointer; transition: 0.1s; }
+        .sub-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+        .game-btn, .sub-btn { background: #f1f5f9; border: 1px solid #e2e8f0; padding: 8px 16px; border-radius: 40px; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: 0.1s; }
         .game-btn.active, .sub-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
         .sub-btn { background: #eef2ff; }
-        
-        /* Options Lotto4/Lotto5 */
-        .options-panel { display: flex; gap: 12px; margin: 10px 0 15px; flex-wrap: wrap; }
+        .nx-panel { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+        .nx-digit { background: #eef2ff; padding: 8px 16px; border-radius: 40px; cursor: pointer; font-weight: 600; text-align: center; width: 50px; }
+
+        /* Options Lotto4 / Lotto5 */
+        .options-panel { display: flex; gap: 12px; margin: 15px 0; flex-wrap: wrap; }
         .option-chip { background: #eef2ff; padding: 6px 16px; border-radius: 30px; font-size: 0.8rem; cursor: pointer; }
         .option-chip.active { background: #3b82f6; color: white; }
-        
+
         /* Ligne de mise compacte */
-        .bet-row { display: flex; gap: 8px; margin: 15px 0; align-items: center; }
-        .bet-row input { padding: 12px; border: 1px solid #cbd5e1; border-radius: 60px; font-size: 1rem; background: white; flex: 1; }
-        .btn-add-icon { background: #3b82f6; border: none; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.8rem; font-weight: bold; cursor: pointer; }
-        
-        .cart-items { max-height: 240px; overflow-y: auto; margin: 12px 0; }
+        .bet-row { display: flex; gap: 10px; margin: 20px 0; align-items: center; }
+        .bet-row input { flex: 1; padding: 14px; border: 1px solid #cbd5e1; border-radius: 60px; font-size: 1rem; background: white; }
+        .btn-add-icon { background: #3b82f6; border: none; border-radius: 50%; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.8rem; cursor: pointer; }
+
+        .cart-items { max-height: 260px; overflow-y: auto; margin: 12px 0; }
         .cart-item { background: #f8fafc; border-radius: 60px; padding: 10px 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0; }
         .cart-total { background: #eef2ff; border-radius: 60px; padding: 12px; text-align: center; font-weight: 700; margin: 12px 0; }
-        .btn-confirm { background: #10b981; width: 100%; padding: 14px; border-radius: 60px; font-weight: 700; font-size: 1rem; border: none; color: white; cursor: pointer; margin-top: 8px; }
+        .btn-confirm { background: #10b981; width: 100%; padding: 14px; border-radius: 60px; font-weight: 700; font-size: 1rem; border: none; color: white; cursor: pointer; }
         .history-card, .result-card { background: white; border-radius: 20px; padding: 14px; margin-bottom: 12px; border: 1px solid #e2e8f0; }
         .badge { display: inline-block; padding: 4px 12px; border-radius: 40px; font-size: 0.7rem; font-weight: 600; }
         .badge-win { background: #d1fae5; color: #065f46; }
@@ -54,15 +59,13 @@
         .deposit-area input { flex: 2; padding: 12px; border-radius: 60px; border: 1px solid #cbd5e1; }
         .deposit-area button { flex: 1; background: #10b981; border: none; border-radius: 60px; color: white; font-weight: 600; cursor: pointer; }
         button:active { transform: scale(0.97); }
-        .nx-panel { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
-        .nx-digit { background: #eef2ff; padding: 6px 12px; border-radius: 30px; cursor: pointer; }
         .error-msg { color: #ef4444; font-size: 0.8rem; margin-top: 8px; text-align: center; }
     </style>
 </head>
 <body>
 <div class="app">
     <div class="header">
-        <h1>🎲 LOTATO · Joueur</h1>
+        <h1>🎲 LOTATO PRO · Joueur</h1>
         <div class="balance-row">
             <span>Mon solde</span>
             <span class="balance" id="headerBalance">0 G</span>
@@ -82,8 +85,9 @@
             <div style="font-weight: 600; margin-bottom: 8px;">🎯 Tirage</div>
             <div class="draws-scroll" id="drawsList"></div>
         </div>
+
         <div class="card">
-            <div style="font-weight: 600; margin-bottom: 10px;">🎲 Jeu</div>
+            <div style="font-weight: 600; margin-bottom: 15px;">🎲 Jeu</div>
             <!-- Catégorie Borlette -->
             <div class="game-category">
                 <div class="category-title">Borlette</div>
@@ -95,46 +99,41 @@
             <div class="game-category">
                 <div class="category-title">Lotto</div>
                 <div class="sub-buttons" id="lotto-buttons">
-                    <button class="sub-btn" data-sub="lotto3">Lotto3</button>
-                    <button class="sub-btn" data-sub="lotto4">Lotto4</button>
-                    <button class="sub-btn" data-sub="lotto5">Lotto5</button>
+                    <button class="sub-btn" data-game="lotto3">Lotto3</button>
+                    <button class="sub-btn" data-game="lotto4">Lotto4</button>
+                    <button class="sub-btn" data-game="lotto5">Lotto5</button>
+                    <button class="sub-btn auto-chip" data-game="auto_lotto4">Auto Lotto4</button>
+                    <button class="sub-btn auto-chip" data-game="auto_lotto5">Auto Lotto5</button>
                 </div>
             </div>
             <!-- Catégorie Mariage -->
             <div class="game-category">
                 <div class="category-title">Mariage</div>
                 <div class="sub-buttons" id="mariage-buttons">
-                    <button class="sub-btn" data-sub="mariage">Mariage</button>
-                    <button class="sub-btn" data-sub="auto_marriage">Auto Mariage</button>
+                    <button class="sub-btn" data-game="mariage">Mariage</button>
+                    <button class="sub-btn auto-chip" data-game="auto_marriage">Auto Mariage</button>
                 </div>
             </div>
             <!-- Catégorie Spéciaux -->
             <div class="game-category">
                 <div class="category-title">Spéciaux</div>
                 <div class="sub-buttons" id="speciaux-buttons">
-                    <button class="sub-btn" data-sub="bo">BO</button>
-                    <button class="sub-btn" data-sub="grap">GRAP</button>
-                    <button class="sub-btn" data-sub="nx">Nx</button>
+                    <button class="sub-btn" data-game="bo">BO</button>
+                    <button class="sub-btn" data-game="grap">GRAP</button>
+                    <button class="sub-btn" data-game="nx">Nx</button>
                 </div>
+                <div id="nxPanel" class="nx-panel" style="display: none;"></div>
             </div>
-            <!-- Catégorie Auto -->
-            <div class="game-category">
-                <div class="category-title">Auto</div>
-                <div class="sub-buttons" id="auto-buttons">
-                    <button class="sub-btn" data-sub="auto_lotto4">Auto Lotto4</button>
-                    <button class="sub-btn" data-sub="auto_lotto5">Auto Lotto5</button>
-                </div>
-            </div>
-            
+
             <div id="optionsPanel" class="options-panel"></div>
-            <div id="nxPanel" class="nx-panel" style="display: none;"></div>
-            
+
             <div class="bet-row">
                 <input type="text" id="betNumber" placeholder="Numéro" autocomplete="off">
                 <input type="number" id="betAmount" placeholder="Montant G" autocomplete="off">
                 <button class="btn-add-icon" id="addBtn">+</button>
             </div>
         </div>
+
         <div class="card">
             <div style="display: flex; justify-content: space-between;">
                 <span><strong>🛒 Panier</strong> (<span id="cartCount">0</span>)</span>
@@ -162,23 +161,27 @@
 </div>
 
 <script>
+    // ==================== Configuration ====================
     const API_BASE = window.location.origin + '/api';
     let token = localStorage.getItem('auth_token');
     let playerId = localStorage.getItem('player_id');
     if (!token || !playerId) window.location.href = 'index.html';
 
+    // État global
     let App = {
         selectedDrawId: null,
         selectedDrawName: "",
         cart: [],
-        selectedGame: "borlette", // jeu actif
+        selectedGame: "borlette",
         lotto4Options: [true, true, true],
         lotto5Options: [true, true],
         playerBalance: 0,
         globalLimits: {},
-        blockedNumbers: []
+        blockedNumbers: [],
+        draws: []           // liste des tirages (id, name, time, active)
     };
 
+    // Helper fetch avec token
     async function apiFetch(endpoint, options = {}) {
         const res = await fetch(`${API_BASE}${endpoint}`, {
             ...options,
@@ -190,6 +193,7 @@
         return data;
     }
 
+    // Récupérer le solde
     async function refreshBalance() {
         try {
             const data = await apiFetch('/player/balance');
@@ -199,27 +203,45 @@
         } catch(e) { console.error(e); }
     }
 
+    // Charger les tirages depuis l'API
     async function loadDraws() {
         try {
             const data = await apiFetch('/draws');
-            const draws = data.draws;
-            const container = document.getElementById('drawsList');
-            container.innerHTML = draws.map(d => `<div class="draw-chip ${App.selectedDrawId === d.id ? 'active' : ''}" data-id="${d.id}" data-name="${d.name}">${d.name} (${d.time.substring(0,5)}) ${!d.active ? '🔒' : ''}</div>`).join('');
-            document.querySelectorAll('.draw-chip').forEach(el => {
-                el.addEventListener('click', () => {
-                    if (!draws.find(d => d.id == el.dataset.id)?.active) { alert("Tirage fermé"); return; }
-                    App.selectedDrawId = parseInt(el.dataset.id);
-                    App.selectedDrawName = el.dataset.name;
-                    loadDraws(); // re-render
-                });
-            });
-            if (!App.selectedDrawId && draws.length) {
-                const firstActive = draws.find(d => d.active);
-                if (firstActive) { App.selectedDrawId = firstActive.id; App.selectedDrawName = firstActive.name; loadDraws(); }
-            }
+            App.draws = data.draws; // tableau avec id, name, time, active
+            renderDraws();
         } catch(e) { console.error(e); alert("Erreur chargement tirages"); }
     }
 
+    function renderDraws() {
+        const container = document.getElementById('drawsList');
+        if (!container) return;
+        container.innerHTML = App.draws.map(d => `
+            <div class="draw-chip ${App.selectedDrawId === d.id ? 'active' : ''} ${!d.active ? 'disabled' : ''}" 
+                 data-id="${d.id}" data-name="${d.name}" data-active="${d.active}">
+                ${d.name} (${d.time.substring(0,5)}) ${!d.active ? '🔒' : ''}
+            </div>
+        `).join('');
+        document.querySelectorAll('.draw-chip').forEach(el => {
+            el.addEventListener('click', () => {
+                const active = el.dataset.active === 'true';
+                if (!active) { alert("Tirage fermé (3 minutes avant l'heure ou déjà passé)"); return; }
+                App.selectedDrawId = parseInt(el.dataset.id);
+                App.selectedDrawName = el.dataset.name;
+                renderDraws();
+            });
+        });
+        // Sélectionner le premier tirage actif par défaut
+        if (!App.selectedDrawId && App.draws.length) {
+            const firstActive = App.draws.find(d => d.active);
+            if (firstActive) {
+                App.selectedDrawId = firstActive.id;
+                App.selectedDrawName = firstActive.name;
+                renderDraws();
+            }
+        }
+    }
+
+    // Récupérer les limites et numéros bloqués
     async function loadSettingsAndLimits() {
         try {
             const settings = await apiFetch('/player/settings');
@@ -276,7 +298,7 @@
 
         let clean = rawNumber.replace(/[^0-9&]/g, '');
 
-        // Gestion des jeux automatiques
+        // Jeux automatiques
         if (['bo','grap','auto_marriage','auto_lotto4','auto_lotto5'].includes(game)) {
             let autoBets = generateAutoBets(game, amount);
             if (autoBets.length === 0) { alert("Aucune combinaison générée (pas assez de numéros dans le panier)"); return; }
@@ -288,7 +310,6 @@
             document.getElementById('betAmount').value = '';
             return;
         }
-        
         if (game === 'nx') {
             if (pendingNxDigit === null) { alert("Choisissez d'abord un chiffre Nx (0-9)"); return; }
             let autoBets = generateAutoBets('nx', amount, pendingNxDigit);
@@ -372,7 +393,7 @@
                 App.cart = [];
                 renderCart();
                 await refreshBalance();
-                alert(`✅ Achat validé ! ${total} G débités. Ticket #${data.ticketId}`);
+                alert(`✅ Achat validé ! ${total} G débités. Ticket #${data.ticket.ticket_id}`);
                 loadHistory();
             } else alert("Erreur achat");
         } catch (err) { alert("Erreur: " + err.message); }
@@ -398,7 +419,7 @@
             const data = await apiFetch('/winners/results');
             const results = data.results;
             const container = document.getElementById('resultsContainer');
-            if (!results.length) { container.innerHTML = '<div class="card">Aucun résultat</div>'; return; }
+            if (!results.length) { container.innerHTML = '<div class="card">Aucun résultat publié</div>'; return; }
             container.innerHTML = results.map(r => `<div class="result-card"><div><strong>${r.name}</strong> <small>${new Date(r.date).toLocaleDateString()}</small></div><div style="font-family:monospace;">🎯 ${r.numbers[0]} - ${r.numbers[1]} - ${r.numbers[2]} | Lotto3: ${r.lotto3}</div></div>`).join('');
         } catch(e) { console.error(e); }
     }
@@ -413,86 +434,49 @@
         } catch(e) { alert("Erreur: " + e.message); }
     }
 
-    // Gestion des sélecteurs de jeux
+    // Initialisation des sélecteurs de jeux
     function initGameSelectors() {
         // Borlette
         document.querySelectorAll('.game-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                const game = btn.dataset.game;
-                App.selectedGame = game;
+                App.selectedGame = btn.dataset.game;
                 document.querySelectorAll('.game-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                // Désactiver les autres sélections visuelles
-                document.querySelectorAll('.sub-btn').forEach(sb => sb.classList.remove('active'));
                 updateOptionsAndInput();
             });
         });
-        // Sous-boutons Lotto
-        document.querySelectorAll('#lotto-buttons .sub-btn').forEach(btn => {
+        // Sous-boutons Lotto, Mariage, Spéciaux
+        document.querySelectorAll('.sub-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                const sub = btn.dataset.sub;
-                App.selectedGame = sub;
-                document.querySelectorAll('.sub-btn').forEach(sb => sb.classList.remove('active'));
-                btn.classList.add('active');
-                document.querySelectorAll('.game-btn').forEach(gb => gb.classList.remove('active'));
-                updateOptionsAndInput();
-            });
-        });
-        // Mariage
-        document.querySelectorAll('#mariage-buttons .sub-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const sub = btn.dataset.sub;
-                App.selectedGame = sub;
-                document.querySelectorAll('.sub-btn').forEach(sb => sb.classList.remove('active'));
-                btn.classList.add('active');
-                document.querySelectorAll('.game-btn').forEach(gb => gb.classList.remove('active'));
-                updateOptionsAndInput();
-            });
-        });
-        // Spéciaux (BO, GRAP, Nx)
-        document.querySelectorAll('#speciaux-buttons .sub-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const sub = btn.dataset.sub;
-                App.selectedGame = sub;
-                document.querySelectorAll('.sub-btn').forEach(sb => sb.classList.remove('active'));
-                btn.classList.add('active');
-                document.querySelectorAll('.game-btn').forEach(gb => gb.classList.remove('active'));
-                updateOptionsAndInput();
-                if (sub === 'nx') {
+                const game = btn.dataset.game;
+                if (game === 'nx') {
                     // Afficher le panneau Nx
                     const panel = document.getElementById('nxPanel');
+                    if (panel.style.display === 'flex') { panel.style.display = 'none'; return; }
                     panel.innerHTML = '';
                     for (let d=0; d<=9; d++) {
-                        const btnDigit = document.createElement('div');
-                        btnDigit.className = 'nx-digit';
-                        btnDigit.innerText = d;
-                        btnDigit.onclick = () => {
+                        const digitDiv = document.createElement('div');
+                        digitDiv.className = 'nx-digit';
+                        digitDiv.innerText = d;
+                        digitDiv.onclick = () => {
                             pendingNxDigit = d;
-                            alert(`Nx sélectionné : ${d} (tous les numéros XX${d})`);
+                            App.selectedGame = `n${d}`;
                             panel.style.display = 'none';
+                            alert(`Jeu N${d} sélectionné : tous les numéros se terminant par ${d}`);
                         };
-                        panel.appendChild(btnDigit);
+                        panel.appendChild(digitDiv);
                     }
                     panel.style.display = 'flex';
-                } else {
-                    document.getElementById('nxPanel').style.display = 'none';
-                    pendingNxDigit = null;
+                    return;
                 }
-            });
-        });
-        // Auto
-        document.querySelectorAll('#auto-buttons .sub-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const sub = btn.dataset.sub;
-                App.selectedGame = sub;
-                document.querySelectorAll('.sub-btn').forEach(sb => sb.classList.remove('active'));
+                App.selectedGame = game;
+                document.querySelectorAll('.sub-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                document.querySelectorAll('.game-btn').forEach(gb => gb.classList.remove('active'));
+                document.querySelectorAll('.game-btn').forEach(b => b.classList.remove('active'));
                 updateOptionsAndInput();
             });
         });
-        
-        // Par défaut sélectionner Borlette
+        // Par défaut
         document.querySelector('.game-btn').classList.add('active');
         App.selectedGame = 'borlette';
         updateOptionsAndInput();
@@ -501,10 +485,10 @@
     function updateOptionsAndInput() {
         const panel = document.getElementById('optionsPanel');
         const numInput = document.getElementById('betNumber');
-        const nxPanel = document.getElementById('nxPanel');
-        nxPanel.style.display = 'none';
+        // Masquer le panneau Nx
+        document.getElementById('nxPanel').style.display = 'none';
         pendingNxDigit = null;
-        
+
         if (App.selectedGame === 'lotto4') {
             panel.innerHTML = `<div class="option-chip ${App.lotto4Options[0] ? 'active' : ''}" data-opt="0">Opt1 (12&34)</div>
                                <div class="option-chip ${App.lotto4Options[1] ? 'active' : ''}" data-opt="1">Opt2 (23&45)</div>
@@ -529,9 +513,9 @@
         } else {
             panel.innerHTML = '';
         }
-        
+
         // Gérer le champ numéro
-        if (['bo','grap','auto_marriage','auto_lotto4','auto_lotto5','nx'].includes(App.selectedGame)) {
+        if (['bo','grap','auto_marriage','auto_lotto4','auto_lotto5','nx'].includes(App.selectedGame) || App.selectedGame.startsWith('n')) {
             numInput.disabled = true;
             numInput.placeholder = 'Auto';
         } else {
@@ -570,6 +554,7 @@
 
     function logout() { localStorage.clear(); window.location.href = 'index.html'; }
 
+    // Navigation par onglets
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', () => {
             const target = tab.dataset.tab;
@@ -583,12 +568,14 @@
         });
     });
 
+    // Boutons
     document.getElementById('addBtn').addEventListener('click', addBet);
     document.getElementById('confirmBtn').addEventListener('click', checkout);
     document.getElementById('clearCartBtn').addEventListener('click', () => { App.cart = []; renderCart(); });
     document.getElementById('rechargeBtn').addEventListener('click', rechargeWithCode);
     document.getElementById('logoutBtn').addEventListener('click', logout);
 
+    // Initialisation
     (async function init() {
         await refreshProfile();
         await loadDraws();
