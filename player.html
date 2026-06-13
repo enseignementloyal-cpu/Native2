@@ -22,17 +22,25 @@
         .draws-scroll { display: flex; gap: 12px; overflow-x: auto; padding: 8px 0 16px; scrollbar-width: thin; }
         .draw-chip { background: #f1f5f9; border-radius: 60px; padding: 8px 20px; white-space: nowrap; font-weight: 500; cursor: pointer; border: 1px solid #e2e8f0; }
         .draw-chip.active { background: #3b82f6; color: white; border-color: #3b82f6; }
-        .games-grid { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; }
-        .game-btn { background: #f1f5f9; border: 1px solid #e2e8f0; padding: 8px 18px; border-radius: 40px; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.1s; }
-        .game-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
+        
+        /* Catégories de jeux */
+        .game-category { margin-bottom: 15px; }
+        .category-title { font-weight: 600; margin-bottom: 8px; font-size: 0.9rem; color: #334155; }
+        .sub-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; }
+        .game-btn, .sub-btn { background: #f1f5f9; border: 1px solid #e2e8f0; padding: 6px 14px; border-radius: 40px; font-size: 0.8rem; font-weight: 500; cursor: pointer; transition: 0.1s; }
+        .game-btn.active, .sub-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
+        .sub-btn { background: #eef2ff; }
+        
+        /* Options Lotto4/Lotto5 */
         .options-panel { display: flex; gap: 12px; margin: 10px 0 15px; flex-wrap: wrap; }
-        .option-chip { background: #eef2ff; padding: 6px 16px; border-radius: 30px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .option-chip { background: #eef2ff; padding: 6px 16px; border-radius: 30px; font-size: 0.8rem; cursor: pointer; }
         .option-chip.active { background: #3b82f6; color: white; }
+        
+        /* Ligne de mise compacte */
         .bet-row { display: flex; gap: 8px; margin: 15px 0; align-items: center; }
-        #betNumber { flex: 2; padding: 12px; border: 1px solid #cbd5e1; border-radius: 60px; font-size: 1rem; background: white; }
-        #betAmount { flex: 1; padding: 12px; border: 1px solid #cbd5e1; border-radius: 60px; font-size: 1rem; background: white; }
-        .btn-add-icon { background: #3b82f6; border: none; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.8rem; font-weight: bold; cursor: pointer; transition: 0.1s; }
-        .btn-add-icon:active { transform: scale(0.95); }
+        .bet-row input { padding: 12px; border: 1px solid #cbd5e1; border-radius: 60px; font-size: 1rem; background: white; flex: 1; }
+        .btn-add-icon { background: #3b82f6; border: none; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.8rem; font-weight: bold; cursor: pointer; }
+        
         .cart-items { max-height: 240px; overflow-y: auto; margin: 12px 0; }
         .cart-item { background: #f8fafc; border-radius: 60px; padding: 10px 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0; }
         .cart-total { background: #eef2ff; border-radius: 60px; padding: 12px; text-align: center; font-weight: 700; margin: 12px 0; }
@@ -46,6 +54,8 @@
         .deposit-area input { flex: 2; padding: 12px; border-radius: 60px; border: 1px solid #cbd5e1; }
         .deposit-area button { flex: 1; background: #10b981; border: none; border-radius: 60px; color: white; font-weight: 600; cursor: pointer; }
         button:active { transform: scale(0.97); }
+        .nx-panel { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+        .nx-digit { background: #eef2ff; padding: 6px 12px; border-radius: 30px; cursor: pointer; }
         .error-msg { color: #ef4444; font-size: 0.8rem; margin-top: 8px; text-align: center; }
     </style>
 </head>
@@ -74,8 +84,51 @@
         </div>
         <div class="card">
             <div style="font-weight: 600; margin-bottom: 10px;">🎲 Jeu</div>
-            <div class="games-grid" id="gameGrid"></div>
+            <!-- Catégorie Borlette -->
+            <div class="game-category">
+                <div class="category-title">Borlette</div>
+                <div class="sub-buttons">
+                    <button class="game-btn" data-game="borlette">Borlette</button>
+                </div>
+            </div>
+            <!-- Catégorie Lotto -->
+            <div class="game-category">
+                <div class="category-title">Lotto</div>
+                <div class="sub-buttons" id="lotto-buttons">
+                    <button class="sub-btn" data-sub="lotto3">Lotto3</button>
+                    <button class="sub-btn" data-sub="lotto4">Lotto4</button>
+                    <button class="sub-btn" data-sub="lotto5">Lotto5</button>
+                </div>
+            </div>
+            <!-- Catégorie Mariage -->
+            <div class="game-category">
+                <div class="category-title">Mariage</div>
+                <div class="sub-buttons" id="mariage-buttons">
+                    <button class="sub-btn" data-sub="mariage">Mariage</button>
+                    <button class="sub-btn" data-sub="auto_marriage">Auto Mariage</button>
+                </div>
+            </div>
+            <!-- Catégorie Spéciaux -->
+            <div class="game-category">
+                <div class="category-title">Spéciaux</div>
+                <div class="sub-buttons" id="speciaux-buttons">
+                    <button class="sub-btn" data-sub="bo">BO</button>
+                    <button class="sub-btn" data-sub="grap">GRAP</button>
+                    <button class="sub-btn" data-sub="nx">Nx</button>
+                </div>
+            </div>
+            <!-- Catégorie Auto -->
+            <div class="game-category">
+                <div class="category-title">Auto</div>
+                <div class="sub-buttons" id="auto-buttons">
+                    <button class="sub-btn" data-sub="auto_lotto4">Auto Lotto4</button>
+                    <button class="sub-btn" data-sub="auto_lotto5">Auto Lotto5</button>
+                </div>
+            </div>
+            
             <div id="optionsPanel" class="options-panel"></div>
+            <div id="nxPanel" class="nx-panel" style="display: none;"></div>
+            
             <div class="bet-row">
                 <input type="text" id="betNumber" placeholder="Numéro" autocomplete="off">
                 <input type="number" id="betAmount" placeholder="Montant G" autocomplete="off">
@@ -118,7 +171,7 @@
         selectedDrawId: null,
         selectedDrawName: "",
         cart: [],
-        selectedGame: "borlette",
+        selectedGame: "borlette", // jeu actif
         lotto4Options: [true, true, true],
         lotto5Options: [true, true],
         playerBalance: 0,
@@ -138,62 +191,69 @@
     }
 
     async function refreshBalance() {
-        const data = await apiFetch('/player/balance');
-        App.playerBalance = data.balance;
-        document.getElementById('headerBalance').innerText = App.playerBalance.toLocaleString() + " G";
-        document.getElementById('profileBalance').innerHTML = App.playerBalance.toLocaleString() + " G";
+        try {
+            const data = await apiFetch('/player/balance');
+            App.playerBalance = data.balance;
+            document.getElementById('headerBalance').innerText = App.playerBalance.toLocaleString() + " G";
+            document.getElementById('profileBalance').innerHTML = App.playerBalance.toLocaleString() + " G";
+        } catch(e) { console.error(e); }
     }
 
     async function loadDraws() {
-        const data = await apiFetch('/draws');
-        const draws = data.draws;
-        const container = document.getElementById('drawsList');
-        container.innerHTML = draws.map(d => `<div class="draw-chip ${App.selectedDrawId === d.id ? 'active' : ''}" data-id="${d.id}" data-name="${d.name}">${d.name} (${d.time.substring(0,5)}) ${!d.active ? '🔒' : ''}</div>`).join('');
-        document.querySelectorAll('.draw-chip').forEach(el => {
-            el.addEventListener('click', () => {
-                if (!draws.find(d => d.id == el.dataset.id)?.active) { alert("Tirage fermé"); return; }
-                App.selectedDrawId = parseInt(el.dataset.id);
-                App.selectedDrawName = el.dataset.name;
-                loadDraws();
+        try {
+            const data = await apiFetch('/draws');
+            const draws = data.draws;
+            const container = document.getElementById('drawsList');
+            container.innerHTML = draws.map(d => `<div class="draw-chip ${App.selectedDrawId === d.id ? 'active' : ''}" data-id="${d.id}" data-name="${d.name}">${d.name} (${d.time.substring(0,5)}) ${!d.active ? '🔒' : ''}</div>`).join('');
+            document.querySelectorAll('.draw-chip').forEach(el => {
+                el.addEventListener('click', () => {
+                    if (!draws.find(d => d.id == el.dataset.id)?.active) { alert("Tirage fermé"); return; }
+                    App.selectedDrawId = parseInt(el.dataset.id);
+                    App.selectedDrawName = el.dataset.name;
+                    loadDraws(); // re-render
+                });
             });
-        });
-        if (!App.selectedDrawId && draws.length) {
-            const firstActive = draws.find(d => d.active);
-            if (firstActive) { App.selectedDrawId = firstActive.id; App.selectedDrawName = firstActive.name; loadDraws(); }
-        }
+            if (!App.selectedDrawId && draws.length) {
+                const firstActive = draws.find(d => d.active);
+                if (firstActive) { App.selectedDrawId = firstActive.id; App.selectedDrawName = firstActive.name; loadDraws(); }
+            }
+        } catch(e) { console.error(e); alert("Erreur chargement tirages"); }
     }
 
     async function loadSettingsAndLimits() {
-        const settings = await apiFetch('/player/settings');
-        App.globalLimits = settings.globalLimits || {};
-        App.blockedNumbers = settings.blockedNumbers || [];
+        try {
+            const settings = await apiFetch('/player/settings');
+            App.globalLimits = settings.globalLimits || {};
+            App.blockedNumbers = settings.blockedNumbers || [];
+        } catch(e) { console.error(e); }
     }
 
     // Génération automatique pour BO, GRAP, Nx, auto_marriage, auto_lotto4, auto_lotto5
-    function generateAutoBets(game, amount) {
+    function generateAutoBets(game, amount, nxDigit = null) {
         let bets = [];
         if (game === 'bo') {
-            for (let i = 0; i <= 9; i++) { let n = i.toString() + i.toString(); bets.push({ game: 'borlette', cleanNumber: n, displayNumber: n, amount }); }
+            for (let i=0; i<=9; i++) { let n = i.toString()+i.toString(); bets.push({ game: 'borlette', cleanNumber: n, displayNumber: n, amount }); }
         } else if (game === 'grap') {
-            for (let i = 0; i <= 9; i++) { let n = i.toString().repeat(3); bets.push({ game: 'lotto3', cleanNumber: n, displayNumber: n, amount }); }
-        } else if (game.startsWith('n')) {
-            let digit = game[1];
-            for (let t = 0; t <= 9; t++) { let n = t.toString() + digit; bets.push({ game: 'borlette', cleanNumber: n, displayNumber: n, amount }); }
+            for (let i=0; i<=9; i++) { let n = i.toString().repeat(3); bets.push({ game: 'lotto3', cleanNumber: n, displayNumber: n, amount }); }
+        } else if (game === 'nx' && nxDigit !== null) {
+            for (let t=0; t<=9; t++) { let n = t.toString() + nxDigit.toString(); bets.push({ game: 'borlette', cleanNumber: n, displayNumber: n, amount }); }
         } else if (game === 'auto_marriage') {
             const borlettes = App.cart.filter(b => b.game === 'borlette' && b.cleanNumber.length === 2).map(b => b.cleanNumber);
             const uniq = [...new Set(borlettes)];
-            for (let i = 0; i < uniq.length; i++) for (let j = i+1; j < uniq.length; j++) bets.push({ game: 'mariage', cleanNumber: uniq[i]+'&'+uniq[j], displayNumber: uniq[i]+'&'+uniq[j], amount });
+            for (let i=0; i<uniq.length; i++) for (let j=i+1; j<uniq.length; j++) bets.push({ game: 'mariage', cleanNumber: uniq[i]+'&'+uniq[j], displayNumber: uniq[i]+'&'+uniq[j], amount });
         } else if (game === 'auto_lotto4') {
             const borlettes = App.cart.filter(b => b.game === 'borlette' && b.cleanNumber.length === 2).map(b => b.cleanNumber);
             const uniq = [...new Set(borlettes)];
-            for (let i = 0; i < uniq.length; i++) for (let j = 0; j < uniq.length; j++) if (i !== j) bets.push({ game: 'lotto4', cleanNumber: uniq[i]+uniq[j], displayNumber: uniq[i]+'-'+uniq[j], amount });
+            for (let i=0; i<uniq.length; i++) for (let j=0; j<uniq.length; j++) if (i!==j) bets.push({ game: 'lotto4', cleanNumber: uniq[i]+uniq[j], displayNumber: uniq[i]+'-'+uniq[j], amount });
         } else if (game === 'auto_lotto5') {
             const lotto3s = App.cart.filter(b => b.game === 'lotto3' && b.cleanNumber.length === 3).map(b => b.cleanNumber);
             const uniq = [...new Set(lotto3s)];
-            for (let i = 0; i < uniq.length; i++) for (let j = 0; j < uniq.length; j++) if (i !== j) bets.push({ game: 'lotto5', cleanNumber: uniq[i]+uniq[j].slice(-2), displayNumber: uniq[i]+'-'+uniq[j].slice(-2), amount });
+            for (let i=0; i<uniq.length; i++) for (let j=0; j<uniq.length; j++) if (i!==j) bets.push({ game: 'lotto5', cleanNumber: uniq[i]+uniq[j].slice(-2), displayNumber: uniq[i]+'-'+uniq[j].slice(-2), amount });
         }
         return bets;
     }
+
+    let pendingNxDigit = null;
 
     function addBet() {
         if (!App.selectedDrawId) { alert("Sélectionnez un tirage actif"); return; }
@@ -216,8 +276,8 @@
 
         let clean = rawNumber.replace(/[^0-9&]/g, '');
 
-        // Jeux automatiques
-        if (['bo','grap','auto_marriage','auto_lotto4','auto_lotto5'].includes(game) || game.startsWith('n')) {
+        // Gestion des jeux automatiques
+        if (['bo','grap','auto_marriage','auto_lotto4','auto_lotto5'].includes(game)) {
             let autoBets = generateAutoBets(game, amount);
             if (autoBets.length === 0) { alert("Aucune combinaison générée (pas assez de numéros dans le panier)"); return; }
             for (let bet of autoBets) {
@@ -226,6 +286,20 @@
             renderCart();
             document.getElementById('betNumber').value = '';
             document.getElementById('betAmount').value = '';
+            return;
+        }
+        
+        if (game === 'nx') {
+            if (pendingNxDigit === null) { alert("Choisissez d'abord un chiffre Nx (0-9)"); return; }
+            let autoBets = generateAutoBets('nx', amount, pendingNxDigit);
+            for (let bet of autoBets) {
+                App.cart.push({ id: Date.now()+Math.random(), game: bet.game, cleanNumber: bet.cleanNumber, displayNumber: bet.displayNumber, amount: bet.amount });
+            }
+            renderCart();
+            document.getElementById('betNumber').value = '';
+            document.getElementById('betAmount').value = '';
+            pendingNxDigit = null;
+            document.getElementById('nxPanel').style.display = 'none';
             return;
         }
 
@@ -305,81 +379,171 @@
     }
 
     async function loadHistory() {
-        const data = await apiFetch('/player/tickets');
-        const tickets = data.tickets;
-        const container = document.getElementById('historyContainer');
-        if (!tickets.length) { container.innerHTML = '<div class="card">Aucun ticket</div>'; return; }
-        container.innerHTML = tickets.map(t => {
-            const win = t.win_amount || 0;
-            let status = !t.checked ? '<span class="badge badge-wait">En attente</span>' : (win > 0 ? `<span class="badge badge-win">Gagné ${win} G</span>` : '<span class="badge badge-loss">Perdu</span>');
-            const preview = (t.bets || []).slice(0,2).map(b => `${b.game} ${b.number}`).join(', ');
-            return `<div class="history-card"><div><strong>${t.draw_name}</strong> ${status}</div><div style="font-size:0.75rem;">📅 ${new Date(t.date).toLocaleString()}</div><div>🎲 ${preview} | Total: ${t.total_amount} G</div>${win>0?`<div style="color:#10b981;">💰 Gain: ${win} G</div>`:''}</div>`;
-        }).join('');
+        try {
+            const data = await apiFetch('/player/tickets');
+            const tickets = data.tickets;
+            const container = document.getElementById('historyContainer');
+            if (!tickets.length) { container.innerHTML = '<div class="card">Aucun ticket</div>'; return; }
+            container.innerHTML = tickets.map(t => {
+                const win = t.win_amount || 0;
+                let status = !t.checked ? '<span class="badge badge-wait">En attente</span>' : (win > 0 ? `<span class="badge badge-win">Gagné ${win} G</span>` : '<span class="badge badge-loss">Perdu</span>');
+                const preview = (t.bets || []).slice(0,2).map(b => `${b.game} ${b.number}`).join(', ');
+                return `<div class="history-card"><div><strong>${t.draw_name}</strong> ${status}</div><div style="font-size:0.75rem;">📅 ${new Date(t.date).toLocaleString()}</div><div>🎲 ${preview} | Total: ${t.total_amount} G</div>${win>0?`<div style="color:#10b981;">💰 Gain: ${win} G</div>`:''}</div>`;
+            }).join('');
+        } catch(e) { console.error(e); }
     }
 
     async function loadResults() {
-        const data = await apiFetch('/winners/results');
-        const results = data.results;
-        const container = document.getElementById('resultsContainer');
-        if (!results.length) { container.innerHTML = '<div class="card">Aucun résultat</div>'; return; }
-        container.innerHTML = results.map(r => `<div class="result-card"><div><strong>${r.name}</strong> <small>${new Date(r.date).toLocaleDateString()}</small></div><div style="font-family:monospace;">🎯 ${r.numbers[0]} - ${r.numbers[1]} - ${r.numbers[2]} | Lotto3: ${r.lotto3}</div></div>`).join('');
+        try {
+            const data = await apiFetch('/winners/results');
+            const results = data.results;
+            const container = document.getElementById('resultsContainer');
+            if (!results.length) { container.innerHTML = '<div class="card">Aucun résultat</div>'; return; }
+            container.innerHTML = results.map(r => `<div class="result-card"><div><strong>${r.name}</strong> <small>${new Date(r.date).toLocaleDateString()}</small></div><div style="font-family:monospace;">🎯 ${r.numbers[0]} - ${r.numbers[1]} - ${r.numbers[2]} | Lotto3: ${r.lotto3}</div></div>`).join('');
+        } catch(e) { console.error(e); }
     }
 
     async function rechargeWithCode() {
         const code = document.getElementById('rechargeCode').value.trim();
         if (!code) { alert("Code requis"); return; }
-        const data = await apiFetch('/player/recharge/code', { method: 'POST', body: JSON.stringify({ code }) });
-        if (data.success) { alert(`Recharge de ${data.amount} G effectuée !`); await refreshBalance(); document.getElementById('rechargeCode').value = ''; }
-        else alert(data.error || "Code invalide");
+        try {
+            const data = await apiFetch('/player/recharge/code', { method: 'POST', body: JSON.stringify({ code }) });
+            if (data.success) { alert(`Recharge de ${data.amount} G effectuée !`); await refreshBalance(); document.getElementById('rechargeCode').value = ''; }
+            else alert(data.error || "Code invalide");
+        } catch(e) { alert("Erreur: " + e.message); }
     }
 
-    function initGameSelector() {
-        const games = [
-            'borlette','lotto3','lotto4','lotto5','mariage',
-            'bo','grap','auto_marriage','auto_lotto4','auto_lotto5',
-            'n0','n1','n2','n3','n4','n5','n6','n7','n8','n9'
-        ];
-        const labels = {
-            borlette:'Borlette', lotto3:'Lotto3', lotto4:'Lotto4', lotto5:'Lotto5', mariage:'Mariage',
-            bo:'BO', grap:'GRAP', auto_marriage:'Auto Mariage', auto_lotto4:'Auto Lotto4', auto_lotto5:'Auto Lotto5',
-            n0:'N0', n1:'N1', n2:'N2', n3:'N3', n4:'N4', n5:'N5', n6:'N6', n7:'N7', n8:'N8', n9:'N9'
-        };
-        const container = document.getElementById('gameGrid');
-        container.innerHTML = games.map(g => `<div class="game-btn ${App.selectedGame === g ? 'active' : ''}" data-game="${g}">${labels[g]}</div>`).join('');
+    // Gestion des sélecteurs de jeux
+    function initGameSelectors() {
+        // Borlette
         document.querySelectorAll('.game-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                App.selectedGame = btn.dataset.game;
+                const game = btn.dataset.game;
+                App.selectedGame = game;
                 document.querySelectorAll('.game-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                updateOptionsPanel();
-                let numInput = document.getElementById('betNumber');
-                if (['bo','grap','auto_marriage','auto_lotto4','auto_lotto5'].includes(App.selectedGame) || App.selectedGame.startsWith('n')) {
-                    numInput.disabled = true;
-                    numInput.placeholder = 'Auto';
+                // Désactiver les autres sélections visuelles
+                document.querySelectorAll('.sub-btn').forEach(sb => sb.classList.remove('active'));
+                updateOptionsAndInput();
+            });
+        });
+        // Sous-boutons Lotto
+        document.querySelectorAll('#lotto-buttons .sub-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const sub = btn.dataset.sub;
+                App.selectedGame = sub;
+                document.querySelectorAll('.sub-btn').forEach(sb => sb.classList.remove('active'));
+                btn.classList.add('active');
+                document.querySelectorAll('.game-btn').forEach(gb => gb.classList.remove('active'));
+                updateOptionsAndInput();
+            });
+        });
+        // Mariage
+        document.querySelectorAll('#mariage-buttons .sub-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const sub = btn.dataset.sub;
+                App.selectedGame = sub;
+                document.querySelectorAll('.sub-btn').forEach(sb => sb.classList.remove('active'));
+                btn.classList.add('active');
+                document.querySelectorAll('.game-btn').forEach(gb => gb.classList.remove('active'));
+                updateOptionsAndInput();
+            });
+        });
+        // Spéciaux (BO, GRAP, Nx)
+        document.querySelectorAll('#speciaux-buttons .sub-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const sub = btn.dataset.sub;
+                App.selectedGame = sub;
+                document.querySelectorAll('.sub-btn').forEach(sb => sb.classList.remove('active'));
+                btn.classList.add('active');
+                document.querySelectorAll('.game-btn').forEach(gb => gb.classList.remove('active'));
+                updateOptionsAndInput();
+                if (sub === 'nx') {
+                    // Afficher le panneau Nx
+                    const panel = document.getElementById('nxPanel');
+                    panel.innerHTML = '';
+                    for (let d=0; d<=9; d++) {
+                        const btnDigit = document.createElement('div');
+                        btnDigit.className = 'nx-digit';
+                        btnDigit.innerText = d;
+                        btnDigit.onclick = () => {
+                            pendingNxDigit = d;
+                            alert(`Nx sélectionné : ${d} (tous les numéros XX${d})`);
+                            panel.style.display = 'none';
+                        };
+                        panel.appendChild(btnDigit);
+                    }
+                    panel.style.display = 'flex';
                 } else {
-                    numInput.disabled = false;
-                    if (App.selectedGame === 'lotto3') numInput.maxLength = 3;
-                    else if (App.selectedGame === 'lotto4') numInput.maxLength = 4;
-                    else if (App.selectedGame === 'lotto5') numInput.maxLength = 5;
-                    else if (App.selectedGame === 'borlette') numInput.maxLength = 2;
-                    else if (App.selectedGame === 'mariage') numInput.maxLength = 4;
-                    else numInput.maxLength = 10;
-                    numInput.placeholder = 'Numéro';
+                    document.getElementById('nxPanel').style.display = 'none';
+                    pendingNxDigit = null;
                 }
             });
         });
-        updateOptionsPanel();
+        // Auto
+        document.querySelectorAll('#auto-buttons .sub-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const sub = btn.dataset.sub;
+                App.selectedGame = sub;
+                document.querySelectorAll('.sub-btn').forEach(sb => sb.classList.remove('active'));
+                btn.classList.add('active');
+                document.querySelectorAll('.game-btn').forEach(gb => gb.classList.remove('active'));
+                updateOptionsAndInput();
+            });
+        });
+        
+        // Par défaut sélectionner Borlette
+        document.querySelector('.game-btn').classList.add('active');
+        App.selectedGame = 'borlette';
+        updateOptionsAndInput();
     }
 
-    function updateOptionsPanel() {
+    function updateOptionsAndInput() {
         const panel = document.getElementById('optionsPanel');
+        const numInput = document.getElementById('betNumber');
+        const nxPanel = document.getElementById('nxPanel');
+        nxPanel.style.display = 'none';
+        pendingNxDigit = null;
+        
         if (App.selectedGame === 'lotto4') {
-            panel.innerHTML = `<div class="option-chip ${App.lotto4Options[0] ? 'active' : ''}" data-opt="0">Opt1 (12&34)</div><div class="option-chip ${App.lotto4Options[1] ? 'active' : ''}" data-opt="1">Opt2 (23&45)</div><div class="option-chip ${App.lotto4Options[2] ? 'active' : ''}" data-opt="2">Opt3 (13&46)</div>`;
-            document.querySelectorAll('.option-chip').forEach(chip => chip.addEventListener('click', () => { let idx = parseInt(chip.dataset.opt); App.lotto4Options[idx] = !App.lotto4Options[idx]; updateOptionsPanel(); }));
+            panel.innerHTML = `<div class="option-chip ${App.lotto4Options[0] ? 'active' : ''}" data-opt="0">Opt1 (12&34)</div>
+                               <div class="option-chip ${App.lotto4Options[1] ? 'active' : ''}" data-opt="1">Opt2 (23&45)</div>
+                               <div class="option-chip ${App.lotto4Options[2] ? 'active' : ''}" data-opt="2">Opt3 (13&46)</div>`;
+            document.querySelectorAll('.option-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    let idx = parseInt(chip.dataset.opt);
+                    App.lotto4Options[idx] = !App.lotto4Options[idx];
+                    updateOptionsAndInput();
+                });
+            });
         } else if (App.selectedGame === 'lotto5') {
-            panel.innerHTML = `<div class="option-chip ${App.lotto5Options[0] ? 'active' : ''}" data-opt="0">Opt1 (123&45)</div><div class="option-chip ${App.lotto5Options[1] ? 'active' : ''}" data-opt="1">Opt2 (123&46)</div>`;
-            document.querySelectorAll('.option-chip').forEach(chip => chip.addEventListener('click', () => { let idx = parseInt(chip.dataset.opt); App.lotto5Options[idx] = !App.lotto5Options[idx]; updateOptionsPanel(); }));
-        } else panel.innerHTML = '';
+            panel.innerHTML = `<div class="option-chip ${App.lotto5Options[0] ? 'active' : ''}" data-opt="0">Opt1 (123&45)</div>
+                               <div class="option-chip ${App.lotto5Options[1] ? 'active' : ''}" data-opt="1">Opt2 (123&46)</div>`;
+            document.querySelectorAll('.option-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    let idx = parseInt(chip.dataset.opt);
+                    App.lotto5Options[idx] = !App.lotto5Options[idx];
+                    updateOptionsAndInput();
+                });
+            });
+        } else {
+            panel.innerHTML = '';
+        }
+        
+        // Gérer le champ numéro
+        if (['bo','grap','auto_marriage','auto_lotto4','auto_lotto5','nx'].includes(App.selectedGame)) {
+            numInput.disabled = true;
+            numInput.placeholder = 'Auto';
+        } else {
+            numInput.disabled = false;
+            if (App.selectedGame === 'lotto3') numInput.maxLength = 3;
+            else if (App.selectedGame === 'lotto4') numInput.maxLength = 4;
+            else if (App.selectedGame === 'lotto5') numInput.maxLength = 5;
+            else if (App.selectedGame === 'borlette') numInput.maxLength = 2;
+            else if (App.selectedGame === 'mariage') numInput.maxLength = 4;
+            else numInput.maxLength = 10;
+            numInput.placeholder = 'Numéro';
+        }
     }
 
     function setupAutoFocus() {
@@ -429,7 +593,7 @@
         await refreshProfile();
         await loadDraws();
         await loadSettingsAndLimits();
-        initGameSelector();
+        initGameSelectors();
         setupAutoFocus();
         loadHistory();
         loadResults();
