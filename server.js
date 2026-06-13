@@ -1,4 +1,4 @@
-// server.js - Authentification unique (owner ou player) - Tirages en base de données
+// server.js - Backend complet LOTATO PRO
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
@@ -18,7 +18,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname)));
 
-// ==================== Base de données (compatible Neon) ====================
+// ==================== Base de données ====================
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.DATABASE_URL?.includes('sslmode=require') ? undefined : { rejectUnauthorized: false }
@@ -69,7 +69,7 @@ async function initTables() {
         )
     `);
 
-    // Tirages (gérés entièrement par le propriétaire)
+    // Tirages
     await pool.query(`
         CREATE TABLE IF NOT EXISTS draws (
             id SERIAL PRIMARY KEY,
@@ -146,6 +146,13 @@ async function initTables() {
             announcements TEXT
         )
     `);
+    const settingsCount = await pool.query('SELECT COUNT(*) FROM lottery_settings');
+    if (parseInt(settingsCount.rows[0].count) === 0) {
+        await pool.query(`
+            INSERT INTO lottery_settings (name, slogan, multipliers, ads_images, announcements)
+            VALUES ('LOTATO PRO', 'La loterie qui fait gagner', '{"lot1":90,"lot2":50,"lot3":30,"lotto3":500,"lotto4":5000,"lotto5":25000,"mariage":500}', '[]', '')
+        `);
+    }
 
     // Limites et blocages
     await pool.query(`
@@ -156,32 +163,12 @@ async function initTables() {
         )
     `);
     await pool.query(`
-        CREATE TABLE IF NOT EXISTS draw_number_limits (
-            draw_id INTEGER REFERENCES draws(id) ON DELETE CASCADE,
-            number VARCHAR(2) NOT NULL,
-            limit_amount DECIMAL(10,2) NOT NULL,
-            PRIMARY KEY (draw_id, number)
-        )
-    `);
-    await pool.query(`
         CREATE TABLE IF NOT EXISTS global_blocked_numbers (
             number VARCHAR(2) PRIMARY KEY
         )
     `);
-    await pool.query(`
-        CREATE TABLE IF NOT EXISTS draw_blocked_numbers (
-            draw_id INTEGER REFERENCES draws(id) ON DELETE CASCADE,
-            number VARCHAR(2) NOT NULL,
-            PRIMARY KEY (draw_id, number)
-        )
-    `);
-    await pool.query(`
-        CREATE TABLE IF NOT EXISTS blocked_lotto3_numbers (
-            number VARCHAR(3) PRIMARY KEY
-        )
-    `);
 
-    // Insertion de quelques tirages par défaut si la table est vide
+    // Tirages par défaut
     const drawsCount = await pool.query('SELECT COUNT(*) FROM draws');
     if (parseInt(drawsCount.rows[0].count) === 0) {
         const defaultDraws = [
@@ -205,7 +192,7 @@ async function initTables() {
     console.log('✅ Tables créées/vérifiées');
 }
 
-// ==================== Cron : fermeture auto des tirages ====================
+// ==================== Cron : fermeture auto des tirages 2 minutes avant ====================
 cron.schedule('* * * * *', async () => {
     try {
         const now = moment().tz('America/Port-au-Prince');
@@ -333,7 +320,7 @@ app.post('/api/auth/login', async (req, res) => {
     return res.status(401).json({ error: 'Identifiants incorrects' });
 });
 
-// ==================== Routes propriétaire (gestion des tirages) ====================
+// ==================== Routes propriétaire ====================
 app.get('/api/owner/draws', authenticateOwner, async (req, res) => {
     const result = await pool.query('SELECT id, name, time, active FROM draws ORDER BY time');
     res.json(result.rows);
@@ -352,18 +339,137 @@ app.put('/api/owner/draws/:id/toggle', authenticateOwner, async (req, res) => {
     res.json({ success: true });
 });
 
-// Routes pour limites, résultats, etc. (inchangées)
-app.post('/api/owner/publish-results', authenticateOwner, async (req, res) => { /* ... votre code existant ... */ });
-app.get('/api/owner/global-limits', authenticateOwner, async (req, res) => { /* ... */ });
-app.post('/api/owner/global-limits', authenticateOwner, async (req, res) => { /* ... */ });
-app.delete('/api/owner/global-limits/:number', authenticateOwner, async (req, res) => { /* ... */ });
-app.get('/api/owner/blocked-numbers', authenticateOwner, async (req, res) => { /* ... */ });
-app.post('/api/owner/block-number', authenticateOwner, async (req, res) => { /* ... */ });
-app.post('/api/owner/unblock-number', authenticateOwner, async (req, res) => { /* ... */ });
-app.get('/api/owner/settings', authenticateOwner, async (req, res) => { /* ... */ });
-app.post('/api/owner/settings', authenticateOwner, async (req, res) => { /* ... */ });
-app.post('/api/owner/generate-recharge-code', authenticateOwner, async (req, res) => { /* ... */ });
-app.get('/api/owner/stats', authenticateOwner, async (req, res) => { /* ... */ });
+app.post('/api/owner/publish-results', authenticateOwner, async (req, res) => {
+    const { drawId, numbers, lotto3 } = req.body;
+    if (!drawId || !numbers || !lotto3) return res.status(400).json({ error: 'Données incomplètes' });
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        // Enregistrer le résultat
+        await client.query(
+            `INSERT INTO winning_results (draw_id, numbers, lotto3) VALUES ($1, $2, $3)`,
+            [drawId, JSON.stringify(numbers), lotto3]
+        );
+        // Récupérer les tickets non vérifiés pour ce tirage
+        const ticketsRes = await client.query(
+            `SELECT * FROM tickets WHERE draw_id = $1 AND checked = false`,
+            [drawId]
+        );
+        const settings = await client.query(`SELECT multipliers FROM lottery_settings LIMIT 1`);
+        const mult = settings.rows[0]?.multipliers || { lot1:90, lot2:50, lot3:30, lotto3:500, lotto4:5000, lotto5:25000, mariage:500 };
+        const [lot1, lot2, lot3num] = numbers;
+        const lotto3Str = lotto3;
+
+        for (const ticket of ticketsRes.rows) {
+            let totalWin = 0;
+            const bets = ticket.bets;
+            for (const bet of bets) {
+                let win = 0;
+                const amt = parseFloat(bet.amount);
+                if (bet.game === 'borlette') {
+                    if (bet.number === lot1) win = amt * mult.lot1;
+                    else if (bet.number === lot2) win = amt * mult.lot2;
+                    else if (bet.number === lot3num) win = amt * mult.lot3;
+                } else if (bet.game === 'lotto3' && bet.number === lotto3Str) {
+                    win = amt * mult.lotto3;
+                } else if (bet.game === 'lotto4' && bet.number.length === 4) {
+                    const combos = [lot1+lot2, lot2+lot3num, lot1+lot3num];
+                    if (combos.includes(bet.number)) win = amt * mult.lotto4;
+                } else if (bet.game === 'lotto5' && bet.number.length === 5) {
+                    const combos = [lotto3Str.slice(0,3)+lot2, lotto3Str.slice(0,3)+lot3num];
+                    if (combos.includes(bet.number)) win = amt * mult.lotto5;
+                } else if (bet.game === 'mariage' && bet.number.includes('&')) {
+                    const [a,b] = bet.number.split('&');
+                    const pairs = [lot1, lot2, lot3num];
+                    let found = false;
+                    for (let i=0;i<3;i++) for(let j=0;j<3;j++) if(i!==j && a===pairs[i] && b===pairs[j]) found=true;
+                    if (found) win = amt * mult.mariage;
+                }
+                totalWin += win;
+            }
+            if (totalWin > 0) {
+                await client.query(
+                    `UPDATE players SET balance = balance + $1 WHERE id = $2`,
+                    [totalWin, ticket.player_id]
+                );
+                await client.query(
+                    `INSERT INTO transactions (player_id, type, amount, description) VALUES ($1, 'win', $2, $3)`,
+                    [ticket.player_id, totalWin, `Gain tirage ${drawId}`]
+                );
+            }
+            await client.query(
+                `UPDATE tickets SET win_amount = $1, checked = true WHERE id = $2`,
+                [totalWin, ticket.id]
+            );
+        }
+        await client.query('COMMIT');
+        res.json({ success: true, message: 'Résultats publiés et gains calculés' });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(err);
+        res.status(500).json({ error: 'Erreur lors de la publication' });
+    } finally {
+        client.release();
+    }
+});
+
+app.get('/api/owner/global-limits', authenticateOwner, async (req, res) => {
+    const result = await pool.query('SELECT number, limit_amount FROM global_number_limits');
+    res.json(result.rows);
+});
+app.post('/api/owner/global-limits', authenticateOwner, async (req, res) => {
+    const { number, limitAmount } = req.body;
+    await pool.query(`INSERT INTO global_number_limits (number, limit_amount) VALUES ($1,$2) ON CONFLICT (number) DO UPDATE SET limit_amount=$2`, [number, limitAmount]);
+    res.json({ success: true });
+});
+app.delete('/api/owner/global-limits/:number', authenticateOwner, async (req, res) => {
+    await pool.query('DELETE FROM global_number_limits WHERE number = $1', [req.params.number]);
+    res.json({ success: true });
+});
+app.get('/api/owner/blocked-numbers', authenticateOwner, async (req, res) => {
+    const result = await pool.query('SELECT number FROM global_blocked_numbers');
+    res.json({ blockedNumbers: result.rows.map(r => r.number) });
+});
+app.post('/api/owner/block-number', authenticateOwner, async (req, res) => {
+    const { number } = req.body;
+    await pool.query('INSERT INTO global_blocked_numbers (number) VALUES ($1) ON CONFLICT DO NOTHING', [number]);
+    res.json({ success: true });
+});
+app.post('/api/owner/unblock-number', authenticateOwner, async (req, res) => {
+    const { number } = req.body;
+    await pool.query('DELETE FROM global_blocked_numbers WHERE number = $1', [number]);
+    res.json({ success: true });
+});
+app.get('/api/owner/settings', authenticateOwner, async (req, res) => {
+    const result = await pool.query('SELECT name, slogan, logo_url, multipliers, ads_images, announcements FROM lottery_settings LIMIT 1');
+    if (result.rows.length) res.json(result.rows[0]);
+    else res.json({});
+});
+app.post('/api/owner/settings', authenticateOwner, async (req, res) => {
+    const { name, slogan, logoUrl, multipliers, adsImages, announcements } = req.body;
+    await pool.query(`UPDATE lottery_settings SET name=$1, slogan=$2, logo_url=$3, multipliers=$4, ads_images=$5, announcements=$6 WHERE id=1`, [name, slogan, logoUrl, multipliers, adsImages, announcements]);
+    res.json({ success: true });
+});
+app.post('/api/owner/generate-recharge-code', authenticateOwner, async (req, res) => {
+    const { amount } = req.body;
+    const code = crypto.randomBytes(8).toString('hex').toUpperCase();
+    await pool.query('INSERT INTO recharge_codes (code, amount) VALUES ($1, $2)', [code, amount]);
+    res.json({ success: true, code, amount });
+});
+app.get('/api/owner/stats', authenticateOwner, async (req, res) => {
+    const players = await pool.query('SELECT COUNT(*) FROM players');
+    const tickets = await pool.query('SELECT COUNT(*) FROM tickets');
+    const betsTotal = await pool.query('SELECT SUM(total_amount) as total FROM tickets');
+    const winsTotal = await pool.query('SELECT SUM(win_amount) as total FROM tickets');
+    const recharges = await pool.query('SELECT SUM(amount) as total FROM transactions WHERE type = \'deposit\'');
+    res.json({
+        totalPlayers: parseInt(players.rows[0].count),
+        totalTickets: parseInt(tickets.rows[0].count),
+        totalBets: parseFloat(betsTotal.rows[0].total || 0),
+        totalWins: parseFloat(winsTotal.rows[0].total || 0),
+        totalRecharges: parseFloat(recharges.rows[0].total || 0)
+    });
+});
 
 // ==================== Routes joueur ====================
 app.get('/api/player/balance', authenticatePlayer, async (req, res) => {
@@ -371,20 +477,72 @@ app.get('/api/player/balance', authenticatePlayer, async (req, res) => {
     res.json({ balance: parseFloat(result.rows[0].balance) });
 });
 
-// Route GET /api/draws (utilisée par player.html) – renvoie les tirages depuis la base
 app.get('/api/draws', authenticatePlayer, async (req, res) => {
     const result = await pool.query('SELECT id, name, time, active FROM draws ORDER BY time');
     res.json({ draws: result.rows });
 });
 
-app.get('/api/player/limits', authenticatePlayer, async (req, res) => { /* ... */ });
-app.get('/api/player/settings', authenticatePlayer, async (req, res) => { /* ... */ });
-app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => { /* ... */ });
-app.get('/api/player/tickets', authenticatePlayer, async (req, res) => { /* ... */ });
-app.get('/api/player/transactions', authenticatePlayer, async (req, res) => { /* ... */ });
-app.post('/api/player/recharge/code', authenticatePlayer, async (req, res) => { /* ... */ });
+app.get('/api/player/settings', authenticatePlayer, async (req, res) => {
+    const settings = await pool.query('SELECT multipliers, announcements, ads_images FROM lottery_settings LIMIT 1');
+    const limits = await pool.query('SELECT number, limit_amount FROM global_number_limits');
+    const blocked = await pool.query('SELECT number FROM global_blocked_numbers');
+    const globalLimits = {};
+    limits.rows.forEach(l => { globalLimits[l.number] = parseFloat(l.limit_amount); });
+    res.json({
+        multipliers: settings.rows[0]?.multipliers || {},
+        announcements: settings.rows[0]?.announcements || '',
+        adsImages: settings.rows[0]?.ads_images || [],
+        globalLimits,
+        blockedNumbers: blocked.rows.map(b => b.number)
+    });
+});
 
-// Route pour les résultats gagnants (utilisée par player.html)
+app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => {
+    const { drawId, drawName, bets, totalAmount } = req.body;
+    if (!drawId || !bets || !totalAmount) return res.status(400).json({ error: 'Données incomplètes' });
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        // Vérifier solde
+        const balanceRes = await client.query('SELECT balance FROM players WHERE id = $1 FOR UPDATE', [req.player.id]);
+        const balance = parseFloat(balanceRes.rows[0].balance);
+        if (balance < totalAmount) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'Solde insuffisant' });
+        }
+        // Débiter
+        await client.query('UPDATE players SET balance = balance - $1 WHERE id = $2', [totalAmount, req.player.id]);
+        // Créer ticket
+        const ticketId = 'TKT' + Date.now() + Math.random().toString(36).substring(2, 6).toUpperCase();
+        await client.query(
+            `INSERT INTO tickets (player_id, draw_id, draw_name, ticket_id, total_amount, bets, checked)
+             VALUES ($1, $2, $3, $4, $5, $6, false)`,
+            [req.player.id, drawId, drawName, ticketId, totalAmount, JSON.stringify(bets)]
+        );
+        // Transaction
+        await client.query(
+            `INSERT INTO transactions (player_id, type, amount, description) VALUES ($1, 'bet', $2, $3)`,
+            [req.player.id, totalAmount, `Achat ticket ${ticketId}`]
+        );
+        await client.query('COMMIT');
+        res.json({ success: true, ticketId });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(err);
+        res.status(500).json({ error: 'Erreur lors de l\'enregistrement' });
+    } finally {
+        client.release();
+    }
+});
+
+app.get('/api/player/tickets', authenticatePlayer, async (req, res) => {
+    const result = await pool.query(
+        `SELECT id, draw_name, total_amount, win_amount, checked, bets, date FROM tickets WHERE player_id = $1 ORDER BY date DESC`,
+        [req.player.id]
+    );
+    res.json({ tickets: result.rows });
+});
+
 app.get('/api/winners/results', authenticatePlayer, async (req, res) => {
     const results = await pool.query(`
         SELECT w.*, d.name FROM winning_results w
@@ -392,6 +550,36 @@ app.get('/api/winners/results', authenticatePlayer, async (req, res) => {
         ORDER BY w.date DESC LIMIT 50
     `);
     res.json({ results: results.rows });
+});
+
+app.post('/api/player/recharge/code', authenticatePlayer, async (req, res) => {
+    const { code } = req.body;
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const codeRes = await client.query('SELECT id, amount, used FROM recharge_codes WHERE code = $1 FOR UPDATE', [code]);
+        if (codeRes.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'Code invalide' });
+        }
+        const rc = codeRes.rows[0];
+        if (rc.used) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'Code déjà utilisé' });
+        }
+        await client.query('UPDATE recharge_codes SET used = true, used_by_player_id = $1, used_at = NOW() WHERE id = $2', [req.player.id, rc.id]);
+        await client.query('UPDATE players SET balance = balance + $1 WHERE id = $2', [rc.amount, req.player.id]);
+        await client.query('INSERT INTO transactions (player_id, type, amount, method, description) VALUES ($1, $2, $3, $4, $5)',
+            [req.player.id, 'deposit', rc.amount, 'code', `Recharge code ${code}`]);
+        await client.query('COMMIT');
+        res.json({ success: true, amount: parseFloat(rc.amount) });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(err);
+        res.status(500).json({ error: 'Erreur lors du rechargement' });
+    } finally {
+        client.release();
+    }
 });
 
 // ==================== Démarrage ====================
