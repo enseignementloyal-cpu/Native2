@@ -1,4 +1,4 @@
-// server.js - Backend complet LOTATO PRO
+// server.js - LOTATO PRO avec fonctionnalités avancées
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
@@ -90,7 +90,7 @@ async function initTables() {
         )
     `);
 
-    // Tickets
+    // Tickets (ajout de la colonne win_details pour stocker les gains détaillés)
     await pool.query(`
         CREATE TABLE IF NOT EXISTS tickets (
             id SERIAL PRIMARY KEY,
@@ -100,6 +100,7 @@ async function initTables() {
             ticket_id VARCHAR(50) UNIQUE,
             total_amount DECIMAL(10,2) DEFAULT 0,
             win_amount DECIMAL(10,2) DEFAULT 0,
+            win_details JSONB,
             paid BOOLEAN DEFAULT false,
             checked BOOLEAN DEFAULT false,
             bets JSONB,
@@ -143,14 +144,15 @@ async function initTables() {
             multipliers JSONB,
             limits JSONB,
             ads_images JSONB,
-            announcements TEXT
+            announcements TEXT,
+            advanced_settings JSONB
         )
     `);
     const settingsCount = await pool.query('SELECT COUNT(*) FROM lottery_settings');
     if (parseInt(settingsCount.rows[0].count) === 0) {
         await pool.query(`
-            INSERT INTO lottery_settings (name, slogan, multipliers, ads_images, announcements)
-            VALUES ('LOTATO PRO', 'La loterie qui fait gagner', '{"lot1":90,"lot2":50,"lot3":30,"lotto3":500,"lotto4":5000,"lotto5":25000,"mariage":500}', '[]', '')
+            INSERT INTO lottery_settings (name, slogan, multipliers, ads_images, announcements, advanced_settings)
+            VALUES ('LOTATO PRO', 'La loterie qui fait gagner', '{"lot1":90,"lot2":50,"lot3":30,"lotto3":500,"lotto4":5000,"lotto5":25000,"mariage":500}', '[]', '', '{"freeMarriage":{"tiers":[{"min":0,"max":50,"count":1},{"min":51,"max":150,"count":2},{"min":151,"max":null,"count":3}],"winAmount":2500}}')
         `);
     }
 
@@ -192,7 +194,7 @@ async function initTables() {
     console.log('✅ Tables créées/vérifiées');
 }
 
-// ==================== Cron : fermeture auto des tirages 2 minutes avant ====================
+// ==================== Cron : fermeture auto des tirages 7 minutes avant ====================
 cron.schedule('* * * * *', async () => {
     try {
         const now = moment().tz('America/Port-au-Prince');
@@ -201,18 +203,19 @@ cron.schedule('* * * * *', async () => {
             `UPDATE draws
              SET active = false
              WHERE active = true
-               AND (time - INTERVAL '2 minutes') <= $1::time
+               AND (time - INTERVAL '7 minutes') <= $1::time
                AND time > $1::time`,
             [currentTime]
         );
         if (result.rowCount > 0) {
-            console.log(`🔒 ${result.rowCount} tirage(s) fermé(s) (2 minutes avant)`);
+            console.log(`🔒 ${result.rowCount} tirage(s) fermé(s) (7 minutes avant)`);
         }
     } catch (err) {
         console.error('❌ Erreur fermeture automatique:', err);
     }
 });
 
+// Réactivation quotidienne à minuit (heure Haïti)
 function scheduleMidnightReactivation() {
     const now = moment().tz('America/Port-au-Prince');
     const midnight = moment.tz('America/Port-au-Prince').endOf('day').add(1, 'millisecond');
@@ -220,7 +223,7 @@ function scheduleMidnightReactivation() {
     setTimeout(async () => {
         try {
             await pool.query(`UPDATE draws SET active = true WHERE active = false`);
-            console.log(`✅ Tous les tirages réactivés à minuit`);
+            console.log(`✅ Tous les tirages réactivés à minuit HT`);
         } catch (err) {
             console.error('❌ Erreur réactivation:', err);
         } finally {
@@ -275,7 +278,6 @@ app.post('/api/auth/player/register', async (req, res) => {
             return res.status(400).json({ error: 'Ce numéro est déjà utilisé' });
         }
         const hashed = await bcrypt.hash(password, 10);
-        // Bonus de bienvenue : 50 G
         const bonusAmount = 50;
         const result = await pool.query(
             `INSERT INTO players (name, phone, password, zone, balance)
@@ -283,7 +285,6 @@ app.post('/api/auth/player/register', async (req, res) => {
             [name, phone, hashed, zone || null, bonusAmount]
         );
         const player = result.rows[0];
-        // Ajouter une transaction de bonus
         await pool.query(
             `INSERT INTO transactions (player_id, type, amount, description) VALUES ($1, 'deposit', $2, $3)`,
             [player.id, bonusAmount, 'Bonus de bienvenue 50 G']
@@ -346,6 +347,7 @@ app.put('/api/owner/draws/:id/toggle', authenticateOwner, async (req, res) => {
     res.json({ success: true });
 });
 
+// Publication des résultats avec calcul détaillé des gains (win_details)
 app.post('/api/owner/publish-results', authenticateOwner, async (req, res) => {
     const { drawId, numbers, lotto3 } = req.body;
     if (!drawId || !numbers || !lotto3) return res.status(400).json({ error: 'Données incomplètes' });
@@ -362,35 +364,59 @@ app.post('/api/owner/publish-results', authenticateOwner, async (req, res) => {
             `SELECT * FROM tickets WHERE draw_id = $1 AND checked = false`,
             [drawId]
         );
-        const settings = await client.query(`SELECT multipliers FROM lottery_settings LIMIT 1`);
+        const settings = await client.query(`SELECT multipliers, advanced_settings FROM lottery_settings LIMIT 1`);
         const mult = settings.rows[0]?.multipliers || { lot1:90, lot2:50, lot3:30, lotto3:500, lotto4:5000, lotto5:25000, mariage:500 };
+        let freeMarriageWin = 2500;
+        if (settings.rows[0]?.advanced_settings?.freeMarriage?.winAmount) {
+            freeMarriageWin = parseInt(settings.rows[0].advanced_settings.freeMarriage.winAmount);
+        }
         const [lot1, lot2, lot3num] = numbers;
         const lotto3Str = lotto3;
 
         for (const ticket of ticketsRes.rows) {
             let totalWin = 0;
-            const bets = ticket.bets;
+            const win_details = [];
+            const bets = typeof ticket.bets === 'string' ? JSON.parse(ticket.bets) : ticket.bets;
             for (const bet of bets) {
                 let win = 0;
-                const amt = parseFloat(bet.amount);
-                if (bet.game === 'borlette') {
-                    if (bet.number === lot1) win = amt * mult.lot1;
-                    else if (bet.number === lot2) win = amt * mult.lot2;
-                    else if (bet.number === lot3num) win = amt * mult.lot3;
+                let reason = '';
+                const amt = parseFloat(bet.amount) || 0;
+                if (bet.game === 'borlette' || bet.game === 'BO' || (bet.game && bet.game.startsWith('n'))) {
+                    const clean = bet.cleanNumber || bet.number;
+                    if (clean === lot1) { win = amt * mult.lot1; reason = 'lot1'; }
+                    else if (clean === lot2) { win = amt * mult.lot2; reason = 'lot2'; }
+                    else if (clean === lot3num) { win = amt * mult.lot3; reason = 'lot3'; }
+                    if (win > 0) {
+                        win_details.push({ game: bet.game, number: clean, gain: win, reason });
+                    }
                 } else if (bet.game === 'lotto3' && bet.number === lotto3Str) {
                     win = amt * mult.lotto3;
+                    win_details.push({ game: 'lotto3', number: bet.number, gain: win, reason: 'lotto3' });
                 } else if (bet.game === 'lotto4' && bet.number.length === 4) {
                     const combos = [lot1+lot2, lot2+lot3num, lot1+lot3num];
-                    if (combos.includes(bet.number)) win = amt * mult.lotto4;
+                    if (combos.includes(bet.number)) {
+                        win = amt * mult.lotto4;
+                        win_details.push({ game: 'lotto4', number: bet.number, gain: win, reason: `lotto4_option${bet.option || ''}` });
+                    }
                 } else if (bet.game === 'lotto5' && bet.number.length === 5) {
                     const combos = [lotto3Str.slice(0,3)+lot2, lotto3Str.slice(0,3)+lot3num];
-                    if (combos.includes(bet.number)) win = amt * mult.lotto5;
-                } else if (bet.game === 'mariage' && bet.number.includes('&')) {
+                    if (combos.includes(bet.number)) {
+                        win = amt * mult.lotto5;
+                        win_details.push({ game: 'lotto5', number: bet.number, gain: win, reason: `lotto5_option${bet.option || ''}` });
+                    }
+                } else if (bet.game === 'mariage' || bet.game === 'auto_marriage') {
                     const [a,b] = bet.number.split('&');
                     const pairs = [lot1, lot2, lot3num];
                     let found = false;
                     for (let i=0;i<3;i++) for(let j=0;j<3;j++) if(i!==j && a===pairs[i] && b===pairs[j]) found=true;
-                    if (found) win = amt * mult.mariage;
+                    if (found) {
+                        if (bet.free && bet.freeType === 'special_marriage') {
+                            win = freeMarriageWin;
+                        } else {
+                            win = amt * mult.mariage;
+                        }
+                        win_details.push({ game: bet.game, number: bet.number, gain: win, reason: 'mariage', free: !!bet.free });
+                    }
                 }
                 totalWin += win;
             }
@@ -405,8 +431,8 @@ app.post('/api/owner/publish-results', authenticateOwner, async (req, res) => {
                 );
             }
             await client.query(
-                `UPDATE tickets SET win_amount = $1, checked = true WHERE id = $2`,
-                [totalWin, ticket.id]
+                `UPDATE tickets SET win_amount = $1, checked = true, win_details = $2 WHERE id = $3`,
+                [totalWin, JSON.stringify(win_details), ticket.id]
             );
         }
         await client.query('COMMIT');
@@ -420,6 +446,7 @@ app.post('/api/owner/publish-results', authenticateOwner, async (req, res) => {
     }
 });
 
+// Limites et blocages (similaires à la version simple)
 app.get('/api/owner/global-limits', authenticateOwner, async (req, res) => {
     const result = await pool.query('SELECT number, limit_amount FROM global_number_limits');
     res.json(result.rows);
@@ -457,16 +484,26 @@ app.post('/api/owner/unblock-number', authenticateOwner, async (req, res) => {
 });
 
 app.get('/api/owner/settings', authenticateOwner, async (req, res) => {
-    const result = await pool.query('SELECT name, slogan, logo_url, multipliers, ads_images, announcements FROM lottery_settings LIMIT 1');
-    if (result.rows.length) res.json(result.rows[0]);
-    else res.json({});
+    const result = await pool.query('SELECT name, slogan, logo_url, multipliers, ads_images, announcements, advanced_settings FROM lottery_settings LIMIT 1');
+    if (result.rows.length) {
+        const row = result.rows[0];
+        res.json({
+            name: row.name,
+            slogan: row.slogan,
+            logoUrl: row.logo_url,
+            multipliers: row.multipliers,
+            adsImages: row.ads_images,
+            announcements: row.announcements,
+            advancedSettings: row.advanced_settings
+        });
+    } else res.json({});
 });
 
 app.post('/api/owner/settings', authenticateOwner, async (req, res) => {
-    const { name, slogan, logoUrl, multipliers, adsImages, announcements } = req.body;
+    const { name, slogan, logoUrl, multipliers, adsImages, announcements, advancedSettings } = req.body;
     await pool.query(
-        `UPDATE lottery_settings SET name=$1, slogan=$2, logo_url=$3, multipliers=$4, ads_images=$5, announcements=$6 WHERE id=1`,
-        [name, slogan, logoUrl, multipliers, adsImages, announcements]
+        `UPDATE lottery_settings SET name=$1, slogan=$2, logo_url=$3, multipliers=$4, ads_images=$5, announcements=$6, advanced_settings=$7 WHERE id=1`,
+        [name, slogan, logoUrl, multipliers, adsImages, announcements, advancedSettings]
     );
     res.json({ success: true });
 });
@@ -501,12 +538,13 @@ app.get('/api/player/balance', authenticatePlayer, async (req, res) => {
 });
 
 app.get('/api/draws', authenticatePlayer, async (req, res) => {
+    // Ne renvoyer que les tirages actifs ? Non, on renvoie tous avec leur état
     const result = await pool.query('SELECT id, name, time, active FROM draws ORDER BY time');
     res.json({ draws: result.rows });
 });
 
 app.get('/api/player/settings', authenticatePlayer, async (req, res) => {
-    const settings = await pool.query('SELECT multipliers, announcements, ads_images FROM lottery_settings LIMIT 1');
+    const settings = await pool.query('SELECT multipliers, announcements, ads_images, advanced_settings FROM lottery_settings LIMIT 1');
     const limits = await pool.query('SELECT number, limit_amount FROM global_number_limits');
     const blocked = await pool.query('SELECT number FROM global_blocked_numbers');
     const globalLimits = {};
@@ -516,16 +554,26 @@ app.get('/api/player/settings', authenticatePlayer, async (req, res) => {
         announcements: settings.rows[0]?.announcements || '',
         adsImages: settings.rows[0]?.ads_images || [],
         globalLimits,
-        blockedNumbers: blocked.rows.map(b => b.number)
+        blockedNumbers: blocked.rows.map(b => b.number),
+        advancedSettings: settings.rows[0]?.advanced_settings || {}
     });
 });
 
+// Sauvegarde d'un ticket avec génération de mariages gratuits
 app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => {
     const { drawId, drawName, bets, totalAmount } = req.body;
     if (!drawId || !bets || !totalAmount) return res.status(400).json({ error: 'Données incomplètes' });
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
+
+        // Vérifier que le tirage est actif (et pas fermé)
+        const drawCheck = await client.query('SELECT active FROM draws WHERE id = $1', [drawId]);
+        if (drawCheck.rows.length === 0 || !drawCheck.rows[0].active) {
+            await client.query('ROLLBACK');
+            return res.status(403).json({ error: 'Ce tirage est fermé, vous ne pouvez plus miser' });
+        }
+
         // Vérifier solde
         const balanceRes = await client.query('SELECT balance FROM players WHERE id = $1 FOR UPDATE', [req.player.id]);
         const balance = parseFloat(balanceRes.rows[0].balance);
@@ -533,25 +581,74 @@ app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => {
             await client.query('ROLLBACK');
             return res.status(400).json({ error: 'Solde insuffisant' });
         }
+
         // Débiter
-        await client.query('UPDATE players SET balance = balance - $1 WHERE id = $2', [totalAmount, req.player.id]);
-        // Créer ticket
+        await client.query('UPDATE players SET balance = balance - $1, updated_at = NOW() WHERE id = $2', [totalAmount, req.player.id]);
+
+        // Récupérer les paramètres avancés pour les mariages gratuits
+        const advSettingsRes = await client.query('SELECT advanced_settings FROM lottery_settings LIMIT 1');
+        let freeMarriageTiers = [
+            { min: 0, max: 50, count: 1 },
+            { min: 51, max: 150, count: 2 },
+            { min: 151, max: null, count: 3 }
+        ];
+        if (advSettingsRes.rows[0]?.advanced_settings?.freeMarriage?.tiers) {
+            freeMarriageTiers = advSettingsRes.rows[0].advanced_settings.freeMarriage.tiers;
+        }
+
+        // Calculer le total des mises payées (sans les gratuits)
+        const paidBets = bets.filter(b => !b.free);
+        const totalPaid = paidBets.reduce((s, b) => s + (parseFloat(b.amount) || 0), 0);
+
+        // Déterminer le nombre de mariages gratuits à ajouter
+        let freeCount = 0;
+        for (const tier of freeMarriageTiers) {
+            const min = tier.min;
+            const max = tier.max;
+            if ((max === null && totalPaid >= min) || (max !== null && totalPaid >= min && totalPaid <= max)) {
+                freeCount = tier.count;
+                break;
+            }
+        }
+
+        // Générer des mariages gratuits aléatoires
+        const freeBets = [];
+        for (let i = 0; i < freeCount; i++) {
+            const n1 = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+            const n2 = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+            freeBets.push({
+                game: 'auto_marriage',
+                number: `${n1}&${n2}`,
+                cleanNumber: n1 + n2,
+                amount: 0,
+                free: true,
+                freeType: 'special_marriage',
+                freeWin: 2500
+            });
+        }
+
+        const finalBets = [...bets, ...freeBets];
+        const finalTotal = finalBets.reduce((s, b) => s + (parseFloat(b.amount) || 0), 0);
+
+        // Créer le ticket
         const ticketId = 'TKT' + Date.now() + Math.random().toString(36).substring(2, 6).toUpperCase();
         await client.query(
             `INSERT INTO tickets (player_id, draw_id, draw_name, ticket_id, total_amount, bets, checked)
              VALUES ($1, $2, $3, $4, $5, $6, false)`,
-            [req.player.id, drawId, drawName, ticketId, totalAmount, JSON.stringify(bets)]
+            [req.player.id, drawId, drawName, ticketId, finalTotal, JSON.stringify(finalBets)]
         );
-        // Transaction
+
+        // Transaction de débit
         await client.query(
             `INSERT INTO transactions (player_id, type, amount, description) VALUES ($1, 'bet', $2, $3)`,
-            [req.player.id, totalAmount, `Achat ticket ${ticketId}`]
+            [req.player.id, totalAmount, `Achat ticket ${ticketId} - ${drawName}`]
         );
+
         await client.query('COMMIT');
-        res.json({ success: true, ticketId });
+        res.json({ success: true, ticketId, freeBetsAdded: freeCount });
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error(err);
+        console.error('Erreur sauvegarde ticket joueur:', err);
         res.status(500).json({ error: 'Erreur lors de l\'enregistrement' });
     } finally {
         client.release();
@@ -560,10 +657,16 @@ app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => {
 
 app.get('/api/player/tickets', authenticatePlayer, async (req, res) => {
     const result = await pool.query(
-        `SELECT id, draw_name, total_amount, win_amount, checked, bets, date FROM tickets WHERE player_id = $1 ORDER BY date DESC`,
+        `SELECT id, draw_name, total_amount, win_amount, win_details, checked, bets, date FROM tickets WHERE player_id = $1 ORDER BY date DESC`,
         [req.player.id]
     );
-    res.json({ tickets: result.rows });
+    // Convertir win_details si nécessaire
+    const tickets = result.rows.map(t => ({
+        ...t,
+        win_details: typeof t.win_details === 'string' ? JSON.parse(t.win_details) : t.win_details,
+        bets: typeof t.bets === 'string' ? JSON.parse(t.bets) : t.bets
+    }));
+    res.json({ tickets });
 });
 
 app.get('/api/winners/results', authenticatePlayer, async (req, res) => {
@@ -591,7 +694,7 @@ app.post('/api/player/recharge/code', authenticatePlayer, async (req, res) => {
             return res.status(400).json({ error: 'Code déjà utilisé' });
         }
         await client.query('UPDATE recharge_codes SET used = true, used_by_player_id = $1, used_at = NOW() WHERE id = $2', [req.player.id, rc.id]);
-        await client.query('UPDATE players SET balance = balance + $1 WHERE id = $2', [rc.amount, req.player.id]);
+        await client.query('UPDATE players SET balance = balance + $1, updated_at = NOW() WHERE id = $2', [rc.amount, req.player.id]);
         await client.query('INSERT INTO transactions (player_id, type, amount, method, description) VALUES ($1, $2, $3, $4, $5)',
             [req.player.id, 'deposit', rc.amount, 'code', `Recharge code ${code}`]);
         await client.query('COMMIT');
