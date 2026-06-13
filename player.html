@@ -5,289 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>LOTATO · Espace Joueur</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        }
-
-        body {
-            background: #f1f5f9;
-            color: #0f172a;
-            padding-bottom: 80px;
-        }
-
-        .app {
-            max-width: 550px;
-            margin: 0 auto;
-            background: white;
-            min-height: 100vh;
-            box-shadow: 0 0 20px rgba(0,0,0,0.05);
-        }
-
-        /* Header */
-        .header {
-            background: #0f172a;
-            color: white;
-            padding: 20px 20px 14px;
-            position: sticky;
-            top: 0;
-            z-index: 20;
-        }
-        .header h1 {
-            font-size: 1.5rem;
-            font-weight: 600;
-        }
-        .balance-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 8px;
-            font-size: 0.9rem;
-        }
-        .balance {
-            background: #2d3a5e;
-            padding: 4px 14px;
-            border-radius: 40px;
-            font-weight: 600;
-        }
-        .logout-btn {
-            background: none;
-            border: 1px solid #ef4444;
-            color: #ef4444;
-            padding: 4px 12px;
-            border-radius: 30px;
-            cursor: pointer;
-        }
-
-        /* Navigation */
-        .tabs {
-            display: flex;
-            background: white;
-            border-bottom: 1px solid #e2e8f0;
-            position: sticky;
-            top: 82px;
-            z-index: 15;
-        }
-        .tab {
-            flex: 1;
-            text-align: center;
-            padding: 12px 0;
-            font-weight: 500;
-            color: #64748b;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-        }
-        .tab.active {
-            color: #3b82f6;
-            border-bottom-color: #3b82f6;
-        }
-
-        /* Screens */
-        .screen {
-            display: none;
-            padding: 20px;
-            background: #f8fafc;
-            min-height: calc(100vh - 140px);
-        }
-        .screen.active {
-            display: block;
-        }
-
-        /* Cartes */
-        .card {
-            background: white;
-            border-radius: 24px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-            border: 1px solid #e2e8f0;
-        }
-
-        /* Tirages horizontaux */
-        .draws-scroll {
-            display: flex;
-            gap: 12px;
-            overflow-x: auto;
-            padding: 8px 0 16px;
-            scrollbar-width: thin;
-        }
-        .draw-chip {
-            background: #f1f5f9;
-            border-radius: 60px;
-            padding: 8px 20px;
-            white-space: nowrap;
-            font-weight: 500;
-            cursor: pointer;
-            border: 1px solid #e2e8f0;
-        }
-        .draw-chip.active {
-            background: #3b82f6;
-            color: white;
-            border-color: #3b82f6;
-        }
-
-        /* Grille des jeux */
-        .games-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin: 20px 0;
-        }
-        .game-btn {
-            background: #f1f5f9;
-            border: 1px solid #e2e8f0;
-            padding: 8px 18px;
-            border-radius: 40px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.1s;
-        }
-        .game-btn.active {
-            background: #3b82f6;
-            color: white;
-            border-color: #3b82f6;
-        }
-
-        /* Options Lotto4 / Lotto5 */
-        .options-panel {
-            display: flex;
-            gap: 12px;
-            margin: 10px 0 15px;
-            flex-wrap: wrap;
-        }
-        .option-chip {
-            background: #eef2ff;
-            padding: 6px 16px;
-            border-radius: 30px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .option-chip.active {
-            background: #3b82f6;
-            color: white;
-        }
-
-        /* Ligne de mise compacte */
-        .bet-row {
-            display: flex;
-            gap: 8px;
-            margin: 15px 0;
-            align-items: center;
-        }
-        .bet-row input {
-            padding: 12px 12px;
-            border: 1px solid #cbd5e1;
-            border-radius: 60px;
-            font-size: 1rem;
-            background: white;
-        }
-        #betNumber {
-            flex: 2;
-            min-width: 0;
-        }
-        #betAmount {
-            flex: 1;
-            min-width: 0;
-        }
-        .btn-add {
-            background: #3b82f6;
-            border: none;
-            border-radius: 60px;
-            padding: 0 20px;
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-
-        /* Panier */
-        .cart-items {
-            max-height: 240px;
-            overflow-y: auto;
-            margin: 12px 0;
-        }
-        .cart-item {
-            background: #f8fafc;
-            border-radius: 60px;
-            padding: 10px 16px;
-            margin-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border: 1px solid #e2e8f0;
-        }
-        .cart-total {
-            background: #eef2ff;
-            border-radius: 60px;
-            padding: 12px;
-            text-align: center;
-            font-weight: 700;
-            margin: 12px 0;
-        }
-        .btn-confirm {
-            background: #10b981;
-            width: 100%;
-            padding: 14px;
-            border-radius: 60px;
-            font-weight: 700;
-            font-size: 1rem;
-            border: none;
-            color: white;
-            cursor: pointer;
-            margin-top: 8px;
-        }
-
-        /* Historique / résultats */
-        .history-card, .result-card {
-            background: white;
-            border-radius: 20px;
-            padding: 14px;
-            margin-bottom: 12px;
-            border: 1px solid #e2e8f0;
-        }
-        .badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 40px;
-            font-size: 0.7rem;
-            font-weight: 600;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
+        body { background: #f1f5f9; color: #0f172a; padding-bottom: 80px; }
+        .app { max-width: 550px; margin: 0 auto; background: white; min-height: 100vh; box-shadow: 0 0 20px rgba(0,0,0,0.05); }
+        .header { background: #0f172a; color: white; padding: 20px 20px 14px; position: sticky; top: 0; z-index: 20; }
+        .header h1 { font-size: 1.5rem; font-weight: 600; }
+        .balance-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.9rem; }
+        .balance { background: #2d3a5e; padding: 4px 14px; border-radius: 40px; font-weight: 600; }
+        .logout-btn { background: none; border: 1px solid #ef4444; color: #ef4444; padding: 4px 12px; border-radius: 30px; cursor: pointer; }
+        .tabs { display: flex; background: white; border-bottom: 1px solid #e2e8f0; position: sticky; top: 82px; z-index: 15; }
+        .tab { flex: 1; text-align: center; padding: 12px 0; font-weight: 500; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; }
+        .tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+        .screen { display: none; padding: 20px; background: #f8fafc; min-height: calc(100vh - 140px); }
+        .screen.active { display: block; }
+        .card { background: white; border-radius: 24px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        .draws-scroll { display: flex; gap: 12px; overflow-x: auto; padding: 8px 0 16px; scrollbar-width: thin; }
+        .draw-chip { background: #f1f5f9; border-radius: 60px; padding: 8px 20px; white-space: nowrap; font-weight: 500; cursor: pointer; border: 1px solid #e2e8f0; }
+        .draw-chip.active { background: #3b82f6; color: white; border-color: #3b82f6; }
+        .games-grid { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; }
+        .game-btn { background: #f1f5f9; border: 1px solid #e2e8f0; padding: 8px 18px; border-radius: 40px; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.1s; }
+        .game-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
+        .options-panel { display: flex; gap: 12px; margin: 10px 0 15px; flex-wrap: wrap; }
+        .option-chip { background: #eef2ff; padding: 6px 16px; border-radius: 30px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .option-chip.active { background: #3b82f6; color: white; }
+        .bet-row { display: flex; gap: 8px; margin: 15px 0; align-items: center; }
+        #betNumber { flex: 2; padding: 12px; border: 1px solid #cbd5e1; border-radius: 60px; font-size: 1rem; background: white; }
+        #betAmount { flex: 1; padding: 12px; border: 1px solid #cbd5e1; border-radius: 60px; font-size: 1rem; background: white; }
+        .btn-add-icon { background: #3b82f6; border: none; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.8rem; font-weight: bold; cursor: pointer; transition: 0.1s; }
+        .btn-add-icon:active { transform: scale(0.95); }
+        .cart-items { max-height: 240px; overflow-y: auto; margin: 12px 0; }
+        .cart-item { background: #f8fafc; border-radius: 60px; padding: 10px 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0; }
+        .cart-total { background: #eef2ff; border-radius: 60px; padding: 12px; text-align: center; font-weight: 700; margin: 12px 0; }
+        .btn-confirm { background: #10b981; width: 100%; padding: 14px; border-radius: 60px; font-weight: 700; font-size: 1rem; border: none; color: white; cursor: pointer; margin-top: 8px; }
+        .history-card, .result-card { background: white; border-radius: 20px; padding: 14px; margin-bottom: 12px; border: 1px solid #e2e8f0; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 40px; font-size: 0.7rem; font-weight: 600; }
         .badge-win { background: #d1fae5; color: #065f46; }
         .badge-loss { background: #fee2e2; color: #991b1b; }
         .badge-wait { background: #fef3c7; color: #92400e; }
-
-        /* Profil */
-        .deposit-area {
-            margin-top: 20px;
-            padding-top: 16px;
-            border-top: 1px solid #e2e8f0;
-            display: flex;
-            gap: 12px;
-        }
-        .deposit-area input {
-            flex: 2;
-            padding: 12px;
-            border-radius: 60px;
-            border: 1px solid #cbd5e1;
-        }
-        .deposit-area button {
-            flex: 1;
-            background: #10b981;
-            border: none;
-            border-radius: 60px;
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
-        }
+        .deposit-area { margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2e8f0; display: flex; gap: 12px; }
+        .deposit-area input { flex: 2; padding: 12px; border-radius: 60px; border: 1px solid #cbd5e1; }
+        .deposit-area button { flex: 1; background: #10b981; border: none; border-radius: 60px; color: white; font-weight: 600; cursor: pointer; }
         button:active { transform: scale(0.97); }
         .error-msg { color: #ef4444; font-size: 0.8rem; margin-top: 8px; text-align: center; }
-        .loading { opacity: 0.6; pointer-events: none; }
     </style>
 </head>
 <body>
@@ -308,13 +67,11 @@
         <div class="tab" data-tab="profile">Profil</div>
     </div>
 
-    <!-- ÉCRAN JOUER -->
     <div id="playScreen" class="screen active">
         <div class="card">
             <div style="font-weight: 600; margin-bottom: 8px;">🎯 Tirage</div>
             <div class="draws-scroll" id="drawsList"></div>
         </div>
-
         <div class="card">
             <div style="font-weight: 600; margin-bottom: 10px;">🎲 Jeu</div>
             <div class="games-grid" id="gameGrid"></div>
@@ -322,10 +79,9 @@
             <div class="bet-row">
                 <input type="text" id="betNumber" placeholder="Numéro" autocomplete="off">
                 <input type="number" id="betAmount" placeholder="Montant G" autocomplete="off">
-                <button class="btn-add" id="addBtn">Ajouter</button>
+                <button class="btn-add-icon" id="addBtn">+</button>
             </div>
         </div>
-
         <div class="card">
             <div style="display: flex; justify-content: space-between;">
                 <span><strong>🛒 Panier</strong> (<span id="cartCount">0</span>)</span>
@@ -337,15 +93,8 @@
         </div>
     </div>
 
-    <!-- HISTORIQUE -->
     <div id="historyScreen" class="screen"><div id="historyContainer"></div></div>
-
-    <!-- RÉSULTATS -->
-    <div id="resultsScreen" class="screen">
-        <div id="resultsContainer"></div>
-    </div>
-
-    <!-- PROFIL -->
+    <div id="resultsScreen" class="screen"><div id="resultsContainer"></div></div>
     <div id="profileScreen" class="screen">
         <div class="card">
             <p><strong>👤 Nom :</strong> <span id="profileName"></span></p>
@@ -360,112 +109,92 @@
 </div>
 
 <script>
-    // Configuration API
     const API_BASE = window.location.origin + '/api';
     let token = localStorage.getItem('auth_token');
     let playerId = localStorage.getItem('player_id');
-    
-    // Redirection si non authentifié
-    if (!token || !playerId) {
-        window.location.href = 'index.html';
-    }
+    if (!token || !playerId) window.location.href = 'index.html';
 
-    // État global du panier et sélections
     let App = {
-        selectedDraw: null,
-        selectedDrawName: "",
         selectedDrawId: null,
+        selectedDrawName: "",
         cart: [],
         selectedGame: "borlette",
         lotto4Options: [true, true, true],
         lotto5Options: [true, true],
         playerBalance: 0,
         globalLimits: {},
-        blockedNumbers: [],
-        multipliers: {}
+        blockedNumbers: []
     };
 
-    // Helper fetch avec token
     async function apiFetch(endpoint, options = {}) {
         const res = await fetch(`${API_BASE}${endpoint}`, {
             ...options,
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-                ...options.headers
-            }
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', ...options.headers }
         });
-        if (res.status === 401) {
-            localStorage.clear();
-            window.location.href = 'index.html';
-            throw new Error('Session expirée');
-        }
+        if (res.status === 401) { localStorage.clear(); window.location.href = 'index.html'; throw new Error('Session expirée'); }
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Erreur serveur');
         return data;
     }
 
-    // Récupérer le solde et mettre à jour l'UI
     async function refreshBalance() {
-        try {
-            const data = await apiFetch('/player/balance');
-            App.playerBalance = data.balance;
-            document.getElementById('headerBalance').innerText = App.playerBalance.toLocaleString() + " G";
-            document.getElementById('profileBalance').innerHTML = App.playerBalance.toLocaleString() + " G";
-        } catch (err) {
-            console.error(err);
-        }
+        const data = await apiFetch('/player/balance');
+        App.playerBalance = data.balance;
+        document.getElementById('headerBalance').innerText = App.playerBalance.toLocaleString() + " G";
+        document.getElementById('profileBalance').innerHTML = App.playerBalance.toLocaleString() + " G";
     }
 
-    // Récupérer les tirages actifs depuis l'API
     async function loadDraws() {
-        try {
-            const data = await apiFetch('/draws');
-            const draws = data.draws;
-            const container = document.getElementById('drawsList');
-            container.innerHTML = draws.map(d => `
-                <div class="draw-chip ${App.selectedDrawId === d.id ? 'active' : ''}" data-id="${d.id}" data-name="${d.name}">
-                    ${d.name} (${d.time.substring(0,5)}) ${!d.active ? '🔒' : ''}
-                </div>
-            `).join('');
-            document.querySelectorAll('.draw-chip').forEach(el => {
-                el.addEventListener('click', () => {
-                    if (!draws.find(d => d.id == el.dataset.id)?.active) {
-                        alert("Ce tirage est fermé ou n'existe plus");
-                        return;
-                    }
-                    App.selectedDrawId = parseInt(el.dataset.id);
-                    App.selectedDrawName = el.dataset.name;
-                    loadDraws(); // Re-render pour afficher actif
-                });
+        const data = await apiFetch('/draws');
+        const draws = data.draws;
+        const container = document.getElementById('drawsList');
+        container.innerHTML = draws.map(d => `<div class="draw-chip ${App.selectedDrawId === d.id ? 'active' : ''}" data-id="${d.id}" data-name="${d.name}">${d.name} (${d.time.substring(0,5)}) ${!d.active ? '🔒' : ''}</div>`).join('');
+        document.querySelectorAll('.draw-chip').forEach(el => {
+            el.addEventListener('click', () => {
+                if (!draws.find(d => d.id == el.dataset.id)?.active) { alert("Tirage fermé"); return; }
+                App.selectedDrawId = parseInt(el.dataset.id);
+                App.selectedDrawName = el.dataset.name;
+                loadDraws();
             });
-            // Sélectionner le premier tirage actif par défaut si aucun
-            if (!App.selectedDrawId && draws.length) {
-                const firstActive = draws.find(d => d.active);
-                if (firstActive) {
-                    App.selectedDrawId = firstActive.id;
-                    App.selectedDrawName = firstActive.name;
-                    loadDraws();
-                }
-            }
-        } catch (err) {
-            console.error(err);
+        });
+        if (!App.selectedDrawId && draws.length) {
+            const firstActive = draws.find(d => d.active);
+            if (firstActive) { App.selectedDrawId = firstActive.id; App.selectedDrawName = firstActive.name; loadDraws(); }
         }
     }
 
-    // Récupérer les paramètres (multiplieurs, limites globales, numéros bloqués)
     async function loadSettingsAndLimits() {
-        try {
-            const settings = await apiFetch('/player/settings');
-            App.multipliers = settings.multipliers || {};
-            App.globalLimits = settings.globalLimits || {};
-            App.blockedNumbers = settings.blockedNumbers || [];
-        } catch (err) {
-            console.error(err);
-        }
+        const settings = await apiFetch('/player/settings');
+        App.globalLimits = settings.globalLimits || {};
+        App.blockedNumbers = settings.blockedNumbers || [];
     }
 
-    // Ajouter au panier avec vérification des limites/blocages
+    // Génération automatique pour BO, GRAP, Nx, auto_marriage, auto_lotto4, auto_lotto5
+    function generateAutoBets(game, amount) {
+        let bets = [];
+        if (game === 'bo') {
+            for (let i = 0; i <= 9; i++) { let n = i.toString() + i.toString(); bets.push({ game: 'borlette', cleanNumber: n, displayNumber: n, amount }); }
+        } else if (game === 'grap') {
+            for (let i = 0; i <= 9; i++) { let n = i.toString().repeat(3); bets.push({ game: 'lotto3', cleanNumber: n, displayNumber: n, amount }); }
+        } else if (game.startsWith('n')) {
+            let digit = game[1];
+            for (let t = 0; t <= 9; t++) { let n = t.toString() + digit; bets.push({ game: 'borlette', cleanNumber: n, displayNumber: n, amount }); }
+        } else if (game === 'auto_marriage') {
+            const borlettes = App.cart.filter(b => b.game === 'borlette' && b.cleanNumber.length === 2).map(b => b.cleanNumber);
+            const uniq = [...new Set(borlettes)];
+            for (let i = 0; i < uniq.length; i++) for (let j = i+1; j < uniq.length; j++) bets.push({ game: 'mariage', cleanNumber: uniq[i]+'&'+uniq[j], displayNumber: uniq[i]+'&'+uniq[j], amount });
+        } else if (game === 'auto_lotto4') {
+            const borlettes = App.cart.filter(b => b.game === 'borlette' && b.cleanNumber.length === 2).map(b => b.cleanNumber);
+            const uniq = [...new Set(borlettes)];
+            for (let i = 0; i < uniq.length; i++) for (let j = 0; j < uniq.length; j++) if (i !== j) bets.push({ game: 'lotto4', cleanNumber: uniq[i]+uniq[j], displayNumber: uniq[i]+'-'+uniq[j], amount });
+        } else if (game === 'auto_lotto5') {
+            const lotto3s = App.cart.filter(b => b.game === 'lotto3' && b.cleanNumber.length === 3).map(b => b.cleanNumber);
+            const uniq = [...new Set(lotto3s)];
+            for (let i = 0; i < uniq.length; i++) for (let j = 0; j < uniq.length; j++) if (i !== j) bets.push({ game: 'lotto5', cleanNumber: uniq[i]+uniq[j].slice(-2), displayNumber: uniq[i]+'-'+uniq[j].slice(-2), amount });
+        }
+        return bets;
+    }
+
     function addBet() {
         if (!App.selectedDrawId) { alert("Sélectionnez un tirage actif"); return; }
         let rawNumber = document.getElementById('betNumber').value.trim();
@@ -473,81 +202,67 @@
         if (isNaN(amount) || amount <= 0) { alert("Montant invalide"); return; }
         let game = App.selectedGame;
 
-        // Vérifier solde suffisant pour tout le panier (sera revérifié au checkout)
         let currentTotal = App.cart.reduce((s,b)=>s+b.amount,0) + amount;
-        if (currentTotal > App.playerBalance) {
-            alert(`Solde insuffisant. Vous avez ${App.playerBalance} G.`);
-            return;
-        }
+        if (currentTotal > App.playerBalance) { alert(`Solde insuffisant. Vous avez ${App.playerBalance} G.`); return; }
 
-        // Fonction pour vérifier limite globale par numéro (pour borlette)
         const checkGlobalLimit = (num2d) => {
             let limit = App.globalLimits[num2d];
             if (limit) {
-                let alreadyInCart = App.cart.filter(b => b.game === 'borlette' && b.cleanNumber === num2d).reduce((s,b)=>s+b.amount,0);
-                if (alreadyInCart + amount > limit) {
-                    alert(`Limite atteinte pour le numéro ${num2d} : max ${limit} G`);
-                    return false;
-                }
+                let already = App.cart.filter(b => b.game === 'borlette' && b.cleanNumber === num2d).reduce((s,b)=>s+b.amount,0);
+                if (already + amount > limit) { alert(`Limite atteinte pour ${num2d} : max ${limit} G`); return false; }
             }
             return true;
         };
 
-        // Nettoyage du numéro
         let clean = rawNumber.replace(/[^0-9&]/g, '');
-        
-        // Validation selon le jeu
+
+        // Jeux automatiques
+        if (['bo','grap','auto_marriage','auto_lotto4','auto_lotto5'].includes(game) || game.startsWith('n')) {
+            let autoBets = generateAutoBets(game, amount);
+            if (autoBets.length === 0) { alert("Aucune combinaison générée (pas assez de numéros dans le panier)"); return; }
+            for (let bet of autoBets) {
+                App.cart.push({ id: Date.now()+Math.random(), game: bet.game, cleanNumber: bet.cleanNumber, displayNumber: bet.displayNumber, amount: bet.amount });
+            }
+            renderCart();
+            document.getElementById('betNumber').value = '';
+            document.getElementById('betAmount').value = '';
+            return;
+        }
+
+        // Jeux normaux
         if (game === 'borlette') {
             if (!/^\d{2}$/.test(clean)) { alert("Borlette : 2 chiffres"); return; }
-            if (App.blockedNumbers.includes(clean)) { alert(`Numéro ${clean} est bloqué`); return; }
+            if (App.blockedNumbers.includes(clean)) { alert(`Numéro ${clean} bloqué`); return; }
             if (!checkGlobalLimit(clean)) return;
             App.cart.push({ id: Date.now()+Math.random(), game, cleanNumber: clean, displayNumber: clean, amount });
-        } 
-        else if (game === 'lotto3') {
+        } else if (game === 'lotto3') {
             if (!/^\d{3}$/.test(clean)) { alert("Lotto3 : 3 chiffres"); return; }
             App.cart.push({ id: Date.now()+Math.random(), game, cleanNumber: clean, displayNumber: clean, amount });
-        }
-        else if (game === 'lotto4') {
+        } else if (game === 'lotto4') {
             if (!/^\d{4}$/.test(clean)) { alert("Lotto4 : 4 chiffres"); return; }
             const opts = App.lotto4Options;
-            if (!opts[0] && !opts[1] && !opts[2]) { alert("Sélectionnez au moins une option Lotto4"); return; }
-            for (let i=0;i<opts.length;i++) {
-                if (opts[i]) {
-                    let displayNum = clean.slice(0,2)+'-'+clean.slice(2,4);
-                    App.cart.push({ id: Date.now()+Math.random(), game, cleanNumber: clean, displayNumber: displayNum, amount, option: i+1 });
-                }
-            }
-        }
-        else if (game === 'lotto5') {
+            if (!opts[0] && !opts[1] && !opts[2]) { alert("Choisissez au moins une option Lotto4"); return; }
+            for (let i=0;i<opts.length;i++) if(opts[i]) App.cart.push({ id: Date.now()+Math.random(), game, cleanNumber: clean, displayNumber: clean.slice(0,2)+'-'+clean.slice(2,4), amount, option: i+1 });
+        } else if (game === 'lotto5') {
             if (!/^\d{5}$/.test(clean)) { alert("Lotto5 : 5 chiffres"); return; }
             const opts = App.lotto5Options;
-            if (!opts[0] && !opts[1]) { alert("Sélectionnez au moins une option Lotto5"); return; }
-            for (let i=0;i<opts.length;i++) {
-                if (opts[i]) {
-                    let displayNum = clean.slice(0,3)+'-'+clean.slice(3,5);
-                    App.cart.push({ id: Date.now()+Math.random(), game, cleanNumber: clean, displayNumber: displayNum, amount, option: i+1 });
-                }
-            }
-        }
-        else if (game === 'mariage') {
+            if (!opts[0] && !opts[1]) { alert("Choisissez au moins une option Lotto5"); return; }
+            for (let i=0;i<opts.length;i++) if(opts[i]) App.cart.push({ id: Date.now()+Math.random(), game, cleanNumber: clean, displayNumber: clean.slice(0,3)+'-'+clean.slice(3,5), amount, option: i+1 });
+        } else if (game === 'mariage') {
             if (!/^\d{2}&\d{2}$/.test(clean)) { alert("Mariage : format 12&34"); return; }
             App.cart.push({ id: Date.now()+Math.random(), game, cleanNumber: clean, displayNumber: clean, amount });
-        }
-        else {
-            alert("Jeu non supporté ou automatique non implémenté dans cette version");
+        } else {
+            alert("Jeu non reconnu");
             return;
         }
 
         renderCart();
         document.getElementById('betNumber').value = '';
         document.getElementById('betAmount').value = '';
-        document.getElementById('betNumber').focus();
     }
 
     function renderCart() {
         const container = document.getElementById('cartList');
-        const totalSpan = document.getElementById('cartTotal');
-        const countSpan = document.getElementById('cartCount');
         let total = 0;
         container.innerHTML = '';
         App.cart.forEach((item, idx) => {
@@ -557,8 +272,8 @@
             div.innerHTML = `<span><strong>${item.game.toUpperCase()}</strong> ${item.displayNumber}</span><span>${item.amount} G</span><button data-idx="${idx}" class="removeCartItem" style="background:#ef4444; padding:4px 12px; border-radius:40px;">✖</button>`;
             container.appendChild(div);
         });
-        totalSpan.innerText = total;
-        countSpan.innerText = App.cart.length;
+        document.getElementById('cartTotal').innerText = total;
+        document.getElementById('cartCount').innerText = App.cart.length;
         document.querySelectorAll('.removeCartItem').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const idx = parseInt(btn.dataset.idx);
@@ -572,25 +287,12 @@
         if (!App.selectedDrawId) { alert("Choisissez un tirage"); return; }
         if (App.cart.length === 0) { alert("Panier vide"); return; }
         const total = App.cart.reduce((s,b)=>s+b.amount,0);
-        if (App.playerBalance < total) { alert(`Solde insuffisant (${App.playerBalance} G). Rechargez.`); return; }
-
-        // Construire les mises pour l'API
-        const bets = App.cart.map(b => ({
-            game: b.game,
-            number: b.cleanNumber,
-            amount: b.amount,
-            option: b.option || null
-        }));
-
+        if (App.playerBalance < total) { alert(`Solde insuffisant`); return; }
+        const bets = App.cart.map(b => ({ game: b.game, number: b.cleanNumber, amount: b.amount, option: b.option || null }));
         try {
             const data = await apiFetch('/player/tickets/save', {
                 method: 'POST',
-                body: JSON.stringify({
-                    drawId: App.selectedDrawId,
-                    drawName: App.selectedDrawName,
-                    bets: bets,
-                    totalAmount: total
-                })
+                body: JSON.stringify({ drawId: App.selectedDrawId, drawName: App.selectedDrawName, bets, totalAmount: total })
             });
             if (data.success) {
                 App.cart = [];
@@ -598,87 +300,72 @@
                 await refreshBalance();
                 alert(`✅ Achat validé ! ${total} G débités. Ticket #${data.ticketId}`);
                 loadHistory();
-            } else {
-                alert("Erreur lors de l'achat: " + (data.error || ''));
-            }
-        } catch (err) {
-            alert("Erreur réseau: " + err.message);
-        }
+            } else alert("Erreur achat");
+        } catch (err) { alert("Erreur: " + err.message); }
     }
 
     async function loadHistory() {
-        try {
-            const data = await apiFetch('/player/tickets');
-            const tickets = data.tickets;
-            const container = document.getElementById('historyContainer');
-            if (!tickets.length) { container.innerHTML = '<div class="card">Aucun ticket</div>'; return; }
-            container.innerHTML = tickets.map(t => {
-                const win = t.win_amount || 0;
-                let status = !t.checked ? '<span class="badge badge-wait">En attente</span>' : (win > 0 ? `<span class="badge badge-win">Gagné ${win} G</span>` : '<span class="badge badge-loss">Perdu</span>');
-                const preview = (t.bets || []).slice(0,2).map(b => `${b.game} ${b.number}`).join(', ');
-                return `<div class="history-card"><div><strong>${t.draw_name}</strong> ${status}</div><div style="font-size:0.75rem;">📅 ${new Date(t.date).toLocaleString()}</div><div>🎲 ${preview} | Total: ${t.total_amount} G</div>${win>0?`<div style="color:#10b981;">💰 Gain: ${win} G</div>`:''}</div>`;
-            }).join('');
-        } catch (err) {
-            console.error(err);
-        }
+        const data = await apiFetch('/player/tickets');
+        const tickets = data.tickets;
+        const container = document.getElementById('historyContainer');
+        if (!tickets.length) { container.innerHTML = '<div class="card">Aucun ticket</div>'; return; }
+        container.innerHTML = tickets.map(t => {
+            const win = t.win_amount || 0;
+            let status = !t.checked ? '<span class="badge badge-wait">En attente</span>' : (win > 0 ? `<span class="badge badge-win">Gagné ${win} G</span>` : '<span class="badge badge-loss">Perdu</span>');
+            const preview = (t.bets || []).slice(0,2).map(b => `${b.game} ${b.number}`).join(', ');
+            return `<div class="history-card"><div><strong>${t.draw_name}</strong> ${status}</div><div style="font-size:0.75rem;">📅 ${new Date(t.date).toLocaleString()}</div><div>🎲 ${preview} | Total: ${t.total_amount} G</div>${win>0?`<div style="color:#10b981;">💰 Gain: ${win} G</div>`:''}</div>`;
+        }).join('');
     }
 
     async function loadResults() {
-        try {
-            const data = await apiFetch('/winners/results');
-            const results = data.results;
-            const container = document.getElementById('resultsContainer');
-            if (!results.length) { container.innerHTML = '<div class="card">Aucun résultat publié</div>'; return; }
-            container.innerHTML = results.map(r => {
-                const nums = r.numbers;
-                return `<div class="result-card"><div><strong>${r.name}</strong> <small>${new Date(r.date).toLocaleDateString()}</small></div><div style="font-family:monospace; font-size:1.1rem;">🎯 ${nums[0]} - ${nums[1]} - ${nums[2]} | Lotto3: ${r.lotto3}</div></div>`;
-            }).join('');
-        } catch (err) {
-            console.error(err);
-        }
+        const data = await apiFetch('/winners/results');
+        const results = data.results;
+        const container = document.getElementById('resultsContainer');
+        if (!results.length) { container.innerHTML = '<div class="card">Aucun résultat</div>'; return; }
+        container.innerHTML = results.map(r => `<div class="result-card"><div><strong>${r.name}</strong> <small>${new Date(r.date).toLocaleDateString()}</small></div><div style="font-family:monospace;">🎯 ${r.numbers[0]} - ${r.numbers[1]} - ${r.numbers[2]} | Lotto3: ${r.lotto3}</div></div>`).join('');
     }
 
     async function rechargeWithCode() {
         const code = document.getElementById('rechargeCode').value.trim();
-        if (!code) { alert("Entrez un code de recharge"); return; }
-        try {
-            const data = await apiFetch('/player/recharge/code', {
-                method: 'POST',
-                body: JSON.stringify({ code })
-            });
-            if (data.success) {
-                alert(`Recharge de ${data.amount} G effectuée !`);
-                await refreshBalance();
-                document.getElementById('rechargeCode').value = '';
-            } else {
-                alert(data.error || "Code invalide");
-            }
-        } catch (err) {
-            alert("Erreur: " + err.message);
-        }
+        if (!code) { alert("Code requis"); return; }
+        const data = await apiFetch('/player/recharge/code', { method: 'POST', body: JSON.stringify({ code }) });
+        if (data.success) { alert(`Recharge de ${data.amount} G effectuée !`); await refreshBalance(); document.getElementById('rechargeCode').value = ''; }
+        else alert(data.error || "Code invalide");
     }
 
     function initGameSelector() {
-        const gameGrid = document.getElementById('gameGrid');
         const games = [
-            { id: 'borlette', label: 'Borlette' }, { id: 'lotto3', label: 'Lotto 3' }, { id: 'lotto4', label: 'Lotto 4' }, { id: 'lotto5', label: 'Lotto 5' },
-            { id: 'mariage', label: 'Mariage' }
+            'borlette','lotto3','lotto4','lotto5','mariage',
+            'bo','grap','auto_marriage','auto_lotto4','auto_lotto5',
+            'n0','n1','n2','n3','n4','n5','n6','n7','n8','n9'
         ];
-        gameGrid.innerHTML = games.map(g => `<div class="game-btn ${App.selectedGame === g.id ? 'active' : ''}" data-game="${g.id}">${g.label}</div>`).join('');
+        const labels = {
+            borlette:'Borlette', lotto3:'Lotto3', lotto4:'Lotto4', lotto5:'Lotto5', mariage:'Mariage',
+            bo:'BO', grap:'GRAP', auto_marriage:'Auto Mariage', auto_lotto4:'Auto Lotto4', auto_lotto5:'Auto Lotto5',
+            n0:'N0', n1:'N1', n2:'N2', n3:'N3', n4:'N4', n5:'N5', n6:'N6', n7:'N7', n8:'N8', n9:'N9'
+        };
+        const container = document.getElementById('gameGrid');
+        container.innerHTML = games.map(g => `<div class="game-btn ${App.selectedGame === g ? 'active' : ''}" data-game="${g}">${labels[g]}</div>`).join('');
         document.querySelectorAll('.game-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 App.selectedGame = btn.dataset.game;
                 document.querySelectorAll('.game-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 updateOptionsPanel();
-                const numInput = document.getElementById('betNumber');
-                numInput.disabled = false;
-                if (App.selectedGame === 'lotto3') numInput.maxLength = 3;
-                else if (App.selectedGame === 'lotto4') numInput.maxLength = 4;
-                else if (App.selectedGame === 'lotto5') numInput.maxLength = 5;
-                else if (App.selectedGame === 'borlette') numInput.maxLength = 2;
-                else if (App.selectedGame === 'mariage') numInput.maxLength = 4;
-                else numInput.maxLength = 10;
+                let numInput = document.getElementById('betNumber');
+                if (['bo','grap','auto_marriage','auto_lotto4','auto_lotto5'].includes(App.selectedGame) || App.selectedGame.startsWith('n')) {
+                    numInput.disabled = true;
+                    numInput.placeholder = 'Auto';
+                } else {
+                    numInput.disabled = false;
+                    if (App.selectedGame === 'lotto3') numInput.maxLength = 3;
+                    else if (App.selectedGame === 'lotto4') numInput.maxLength = 4;
+                    else if (App.selectedGame === 'lotto5') numInput.maxLength = 5;
+                    else if (App.selectedGame === 'borlette') numInput.maxLength = 2;
+                    else if (App.selectedGame === 'mariage') numInput.maxLength = 4;
+                    else numInput.maxLength = 10;
+                    numInput.placeholder = 'Numéro';
+                }
             });
         });
         updateOptionsPanel();
@@ -687,29 +374,12 @@
     function updateOptionsPanel() {
         const panel = document.getElementById('optionsPanel');
         if (App.selectedGame === 'lotto4') {
-            panel.innerHTML = `<div class="option-chip ${App.lotto4Options[0] ? 'active' : ''}" data-opt="0">Option 1 (12&34)</div>
-                               <div class="option-chip ${App.lotto4Options[1] ? 'active' : ''}" data-opt="1">Option 2 (23&45)</div>
-                               <div class="option-chip ${App.lotto4Options[2] ? 'active' : ''}" data-opt="2">Option 3 (13&46)</div>`;
-            document.querySelectorAll('.option-chip').forEach(chip => {
-                chip.addEventListener('click', (e) => {
-                    const idx = parseInt(chip.dataset.opt);
-                    App.lotto4Options[idx] = !App.lotto4Options[idx];
-                    updateOptionsPanel();
-                });
-            });
+            panel.innerHTML = `<div class="option-chip ${App.lotto4Options[0] ? 'active' : ''}" data-opt="0">Opt1 (12&34)</div><div class="option-chip ${App.lotto4Options[1] ? 'active' : ''}" data-opt="1">Opt2 (23&45)</div><div class="option-chip ${App.lotto4Options[2] ? 'active' : ''}" data-opt="2">Opt3 (13&46)</div>`;
+            document.querySelectorAll('.option-chip').forEach(chip => chip.addEventListener('click', () => { let idx = parseInt(chip.dataset.opt); App.lotto4Options[idx] = !App.lotto4Options[idx]; updateOptionsPanel(); }));
         } else if (App.selectedGame === 'lotto5') {
-            panel.innerHTML = `<div class="option-chip ${App.lotto5Options[0] ? 'active' : ''}" data-opt="0">Option 1 (123&45)</div>
-                               <div class="option-chip ${App.lotto5Options[1] ? 'active' : ''}" data-opt="1">Option 2 (123&46)</div>`;
-            document.querySelectorAll('.option-chip').forEach(chip => {
-                chip.addEventListener('click', (e) => {
-                    const idx = parseInt(chip.dataset.opt);
-                    App.lotto5Options[idx] = !App.lotto5Options[idx];
-                    updateOptionsPanel();
-                });
-            });
-        } else {
-            panel.innerHTML = '';
-        }
+            panel.innerHTML = `<div class="option-chip ${App.lotto5Options[0] ? 'active' : ''}" data-opt="0">Opt1 (123&45)</div><div class="option-chip ${App.lotto5Options[1] ? 'active' : ''}" data-opt="1">Opt2 (123&46)</div>`;
+            document.querySelectorAll('.option-chip').forEach(chip => chip.addEventListener('click', () => { let idx = parseInt(chip.dataset.opt); App.lotto5Options[idx] = !App.lotto5Options[idx]; updateOptionsPanel(); }));
+        } else panel.innerHTML = '';
     }
 
     function setupAutoFocus() {
@@ -729,19 +399,13 @@
     }
 
     async function refreshProfile() {
-        const name = localStorage.getItem('player_name') || '';
-        const phone = localStorage.getItem('player_phone') || '';
-        document.getElementById('profileName').innerText = name;
-        document.getElementById('profilePhone').innerText = phone;
+        document.getElementById('profileName').innerText = localStorage.getItem('player_name') || '';
+        document.getElementById('profilePhone').innerText = localStorage.getItem('player_phone') || '';
         await refreshBalance();
     }
 
-    function logout() {
-        localStorage.clear();
-        window.location.href = 'index.html';
-    }
+    function logout() { localStorage.clear(); window.location.href = 'index.html'; }
 
-    // Navigation entre onglets
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', () => {
             const target = tab.dataset.tab;
@@ -755,23 +419,20 @@
         });
     });
 
-    // Événements
     document.getElementById('addBtn').addEventListener('click', addBet);
     document.getElementById('confirmBtn').addEventListener('click', checkout);
     document.getElementById('clearCartBtn').addEventListener('click', () => { App.cart = []; renderCart(); });
     document.getElementById('rechargeBtn').addEventListener('click', rechargeWithCode);
     document.getElementById('logoutBtn').addEventListener('click', logout);
 
-    // Initialisation
     (async function init() {
         await refreshProfile();
         await loadDraws();
         await loadSettingsAndLimits();
         initGameSelector();
         setupAutoFocus();
-        // Précharger quelques éléments
-        await loadHistory();
-        await loadResults();
+        loadHistory();
+        loadResults();
     })();
 </script>
 </body>

@@ -154,7 +154,7 @@ async function initTables() {
         `);
     }
 
-    // Limites et blocages
+    // Limites globales et blocages
     await pool.query(`
         CREATE TABLE IF NOT EXISTS global_number_limits (
             number VARCHAR(2) NOT NULL PRIMARY KEY,
@@ -275,12 +275,19 @@ app.post('/api/auth/player/register', async (req, res) => {
             return res.status(400).json({ error: 'Ce numéro est déjà utilisé' });
         }
         const hashed = await bcrypt.hash(password, 10);
+        // Bonus de bienvenue : 50 G
+        const bonusAmount = 50;
         const result = await pool.query(
             `INSERT INTO players (name, phone, password, zone, balance)
-             VALUES ($1, $2, $3, $4, 0) RETURNING id, name, phone, balance`,
-            [name, phone, hashed, zone || null]
+             VALUES ($1, $2, $3, $4, $5) RETURNING id, name, phone, balance`,
+            [name, phone, hashed, zone || null, bonusAmount]
         );
         const player = result.rows[0];
+        // Ajouter une transaction de bonus
+        await pool.query(
+            `INSERT INTO transactions (player_id, type, amount, description) VALUES ($1, 'deposit', $2, $3)`,
+            [player.id, bonusAmount, 'Bonus de bienvenue 50 G']
+        );
         const token = jwt.sign({ id: player.id, role: 'player', name: player.name, phone: player.phone }, JWT_SECRET, { expiresIn: '7d' });
         res.json({ success: true, token, playerId: player.id, name: player.name, balance: parseFloat(player.balance) });
     } catch (err) {
@@ -417,45 +424,61 @@ app.get('/api/owner/global-limits', authenticateOwner, async (req, res) => {
     const result = await pool.query('SELECT number, limit_amount FROM global_number_limits');
     res.json(result.rows);
 });
+
 app.post('/api/owner/global-limits', authenticateOwner, async (req, res) => {
     const { number, limitAmount } = req.body;
+    if (!number || !limitAmount) return res.status(400).json({ error: 'Numéro et montant requis' });
     await pool.query(`INSERT INTO global_number_limits (number, limit_amount) VALUES ($1,$2) ON CONFLICT (number) DO UPDATE SET limit_amount=$2`, [number, limitAmount]);
     res.json({ success: true });
 });
+
 app.delete('/api/owner/global-limits/:number', authenticateOwner, async (req, res) => {
     await pool.query('DELETE FROM global_number_limits WHERE number = $1', [req.params.number]);
     res.json({ success: true });
 });
+
 app.get('/api/owner/blocked-numbers', authenticateOwner, async (req, res) => {
     const result = await pool.query('SELECT number FROM global_blocked_numbers');
     res.json({ blockedNumbers: result.rows.map(r => r.number) });
 });
+
 app.post('/api/owner/block-number', authenticateOwner, async (req, res) => {
     const { number } = req.body;
+    if (!number) return res.status(400).json({ error: 'Numéro requis' });
     await pool.query('INSERT INTO global_blocked_numbers (number) VALUES ($1) ON CONFLICT DO NOTHING', [number]);
     res.json({ success: true });
 });
+
 app.post('/api/owner/unblock-number', authenticateOwner, async (req, res) => {
     const { number } = req.body;
+    if (!number) return res.status(400).json({ error: 'Numéro requis' });
     await pool.query('DELETE FROM global_blocked_numbers WHERE number = $1', [number]);
     res.json({ success: true });
 });
+
 app.get('/api/owner/settings', authenticateOwner, async (req, res) => {
     const result = await pool.query('SELECT name, slogan, logo_url, multipliers, ads_images, announcements FROM lottery_settings LIMIT 1');
     if (result.rows.length) res.json(result.rows[0]);
     else res.json({});
 });
+
 app.post('/api/owner/settings', authenticateOwner, async (req, res) => {
     const { name, slogan, logoUrl, multipliers, adsImages, announcements } = req.body;
-    await pool.query(`UPDATE lottery_settings SET name=$1, slogan=$2, logo_url=$3, multipliers=$4, ads_images=$5, announcements=$6 WHERE id=1`, [name, slogan, logoUrl, multipliers, adsImages, announcements]);
+    await pool.query(
+        `UPDATE lottery_settings SET name=$1, slogan=$2, logo_url=$3, multipliers=$4, ads_images=$5, announcements=$6 WHERE id=1`,
+        [name, slogan, logoUrl, multipliers, adsImages, announcements]
+    );
     res.json({ success: true });
 });
+
 app.post('/api/owner/generate-recharge-code', authenticateOwner, async (req, res) => {
     const { amount } = req.body;
+    if (!amount || amount <= 0) return res.status(400).json({ error: 'Montant valide requis' });
     const code = crypto.randomBytes(8).toString('hex').toUpperCase();
     await pool.query('INSERT INTO recharge_codes (code, amount) VALUES ($1, $2)', [code, amount]);
     res.json({ success: true, code, amount });
 });
+
 app.get('/api/owner/stats', authenticateOwner, async (req, res) => {
     const players = await pool.query('SELECT COUNT(*) FROM players');
     const tickets = await pool.query('SELECT COUNT(*) FROM tickets');
