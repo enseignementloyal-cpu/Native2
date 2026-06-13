@@ -3,94 +3,428 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>LOTATO PRO · Espace Joueur</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>LOTATO · Joueur</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-        body { background: #f1f5f9; color: #0f172a; padding-bottom: 80px; }
-        .app { max-width: 550px; margin: 0 auto; background: white; min-height: 100vh; box-shadow: 0 0 20px rgba(0,0,0,0.05); }
-        .header { background: #0f172a; color: white; padding: 20px; position: sticky; top: 0; z-index: 20; }
-        .header h1 { font-size: 1.5rem; font-weight: 600; }
-        .balance-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.9rem; }
-        .balance { background: #2d3a5e; padding: 4px 14px; border-radius: 40px; font-weight: 600; }
-        .logout-btn { background: none; border: 1px solid #ef4444; color: #ef4444; padding: 4px 12px; border-radius: 30px; cursor: pointer; }
-        .tabs { display: flex; background: white; border-bottom: 1px solid #e2e8f0; position: sticky; top: 82px; z-index: 15; }
-        .tab { flex: 1; text-align: center; padding: 12px 0; font-weight: 500; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; }
-        .tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
-        .screen { display: none; padding: 20px; background: #f8fafc; min-height: calc(100vh - 140px); }
-        .screen.active { display: block; }
-        .card { background: white; border-radius: 24px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
-        .draws-scroll { display: flex; gap: 12px; overflow-x: auto; padding: 8px 0 16px; scrollbar-width: thin; }
-        .draw-chip { background: #f1f5f9; border-radius: 60px; padding: 8px 20px; white-space: nowrap; font-weight: 500; cursor: pointer; border: 1px solid #e2e8f0; }
-        .draw-chip.active { background: #3b82f6; color: white; border-color: #3b82f6; }
-        .draw-chip.disabled { opacity: 0.5; text-decoration: line-through; cursor: not-allowed; background: #e2e8f0; }
-        .game-category { margin-bottom: 20px; }
-        .category-title { font-weight: 600; margin-bottom: 8px; font-size: 0.9rem; color: #334155; }
-        .sub-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
-        .game-btn, .sub-btn { background: #f1f5f9; border: 1px solid #e2e8f0; padding: 8px 16px; border-radius: 40px; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: 0.1s; }
-        .game-btn.active, .sub-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
-        .sub-btn { background: #eef2ff; }
-        .auto-chip { background: #fef3c7; border-color: #f59e0b; }
-        .nx-panel { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
-        .nx-digit { background: #eef2ff; padding: 8px 16px; border-radius: 40px; cursor: pointer; font-weight: 600; text-align: center; width: 50px; }
-        .options-panel { display: flex; gap: 12px; margin: 15px 0; flex-wrap: wrap; }
-        .option-chip { background: #eef2ff; padding: 6px 16px; border-radius: 30px; font-size: 0.8rem; cursor: pointer; }
-        .option-chip.active { background: #3b82f6; color: white; }
-        .bet-row { display: flex; gap: 10px; margin: 20px 0; align-items: center; }
-        .bet-row input { flex: 1; padding: 14px; border: 1px solid #cbd5e1; border-radius: 60px; font-size: 1rem; background: white; }
-        .btn-add-icon { background: #3b82f6; border: none; border-radius: 50%; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.8rem; cursor: pointer; }
-        .cart-items { max-height: 260px; overflow-y: auto; margin: 12px 0; }
-        .cart-item { background: #f8fafc; border-radius: 60px; padding: 10px 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0; }
-        .cart-total { background: #eef2ff; border-radius: 60px; padding: 12px; text-align: center; font-weight: 700; margin: 12px 0; }
-        .btn-confirm { background: #10b981; width: 100%; padding: 14px; border-radius: 60px; font-weight: 700; font-size: 1rem; border: none; color: white; cursor: pointer; }
-        .history-card, .result-card { background: white; border-radius: 20px; padding: 14px; margin-bottom: 12px; border: 1px solid #e2e8f0; }
-        .badge { display: inline-block; padding: 4px 12px; border-radius: 40px; font-size: 0.7rem; font-weight: 600; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(145deg, #eef2f9 0%, #e0e7f0 100%);
+            padding-bottom: 80px;
+        }
+
+        .app {
+            max-width: 550px;
+            margin: 0 auto;
+            background: #ffffff;
+            min-height: 100vh;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.15);
+            border-radius: 0 0 32px 32px;
+            overflow: hidden;
+        }
+
+        /* Header amélioré */
+        .header {
+            background: linear-gradient(135deg, #0b1120 0%, #1a2639 100%);
+            color: white;
+            padding: 20px 22px 18px;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+
+        .header h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .balance-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            font-size: 0.9rem;
+        }
+
+        .balance {
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(4px);
+            padding: 5px 16px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .logout-btn {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid #ef4444;
+            color: #fecaca;
+            padding: 5px 14px;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .logout-btn:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        /* Tabs modernes */
+        .tabs {
+            display: flex;
+            background: white;
+            border-bottom: 1px solid #e9edf2;
+            position: sticky;
+            top: 84px;
+            z-index: 15;
+            padding: 0 12px;
+        }
+
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 14px 0 12px;
+            font-weight: 600;
+            color: #6c7a91;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .tab.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.04);
+        }
+
+        /* Écrans */
+        .screen {
+            display: none;
+            padding: 20px;
+            background: #f9fbfe;
+            min-height: calc(100vh - 140px);
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        /* Cartes */
+        .card {
+            background: white;
+            border-radius: 28px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 12px rgba(0, 0, 0, 0.03), 0 0 0 1px rgba(0, 0, 0, 0.02);
+            transition: transform 0.1s ease;
+        }
+
+        /* Tirages scroll */
+        .draws-scroll {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding: 8px 2px 12px;
+            scrollbar-width: thin;
+        }
+
+        .draw-chip {
+            background: #f1f4f9;
+            border-radius: 60px;
+            padding: 8px 22px;
+            white-space: nowrap;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid #e2e8f0;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .draw-chip.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+        }
+
+        .draw-chip.disabled {
+            opacity: 0.5;
+            text-decoration: line-through;
+            cursor: not-allowed;
+            background: #e9ecef;
+        }
+
+        /* Catégories jeux */
+        .game-category {
+            margin-bottom: 20px;
+        }
+
+        .category-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+            font-size: 0.85rem;
+            color: #2c3e66;
+            letter-spacing: -0.2px;
+        }
+
+        .sub-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .game-btn, .sub-btn {
+            background: #f0f3f8;
+            border: 1px solid #e2e8f0;
+            padding: 6px 18px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .game-btn.active, .sub-btn.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+            box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+        }
+
+        .sub-btn.auto-chip {
+            background: #fef9e3;
+            border-color: #fbbf24;
+            color: #b45309;
+        }
+
+        .options-panel {
+            display: flex;
+            gap: 12px;
+            margin: 15px 0 10px;
+            flex-wrap: wrap;
+        }
+
+        .option-chip {
+            background: #eef2ff;
+            padding: 6px 18px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .option-chip.active {
+            background: #3b82f6;
+            color: white;
+        }
+
+        /* 🎯 Ligne de mise COMPACTE (réduction 90% de la longueur) */
+        .bet-row {
+            display: flex;
+            gap: 10px;
+            margin: 18px 0 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .bet-row input {
+            width: 120px;          /* ← taille très réduite */
+            padding: 12px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 48px;
+            font-size: 0.9rem;
+            background: white;
+            text-align: center;
+            transition: 0.2s;
+        }
+
+        .bet-row input:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .btn-add-icon {
+            background: #3b82f6;
+            border: none;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-add-icon:hover {
+            transform: scale(1.02);
+            background: #2563eb;
+        }
+
+        /* Panier */
+        .cart-items {
+            max-height: 240px;
+            overflow-y: auto;
+            margin: 15px 0;
+        }
+
+        .cart-item {
+            background: #f8fafc;
+            border-radius: 60px;
+            padding: 10px 16px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #e2edf7;
+        }
+
+        .cart-total {
+            background: #eef2ff;
+            border-radius: 60px;
+            padding: 12px;
+            text-align: center;
+            font-weight: 800;
+            margin: 12px 0;
+        }
+
+        .btn-confirm {
+            background: #10b981;
+            width: 100%;
+            padding: 14px;
+            border-radius: 60px;
+            font-weight: 800;
+            font-size: 1rem;
+            border: none;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-confirm:active {
+            transform: scale(0.97);
+        }
+
+        .history-card, .result-card {
+            background: white;
+            border-radius: 24px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border: 1px solid #eef2ff;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 60px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
         .badge-win { background: #d1fae5; color: #065f46; }
         .badge-loss { background: #fee2e2; color: #991b1b; }
         .badge-wait { background: #fef3c7; color: #92400e; }
-        .deposit-area { margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2e8f0; display: flex; gap: 12px; }
-        .deposit-area input { flex: 2; padding: 12px; border-radius: 60px; border: 1px solid #cbd5e1; }
-        .deposit-area button { flex: 1; background: #10b981; border: none; border-radius: 60px; color: white; font-weight: 600; cursor: pointer; }
-        button:active { transform: scale(0.97); }
+
+        .deposit-area {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid #eef2ff;
+            display: flex;
+            gap: 12px;
+        }
+        .deposit-area input {
+            flex: 2;
+            padding: 12px;
+            border-radius: 60px;
+            border: 1px solid #cbd5e1;
+        }
+        .deposit-area button {
+            flex: 1;
+            background: #10b981;
+            border: none;
+            border-radius: 60px;
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .nx-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 12px 0;
+        }
+        .nx-digit {
+            background: #eef2ff;
+            padding: 8px 18px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: 0.1s;
+        }
+        .error-msg {
+            color: #dc2626;
+            font-size: 0.75rem;
+            margin-top: 8px;
+            text-align: center;
+        }
+        button:active { transform: scale(0.96); }
     </style>
 </head>
 <body>
 <div class="app">
     <div class="header">
-        <h1>🎲 LOTATO PRO · Joueur</h1>
+        <h1><i class="fas fa-dice-d6"></i> LOTATO · Joueur</h1>
         <div class="balance-row">
-            <span>Mon solde</span>
+            <span><i class="fas fa-coins"></i> Mon solde</span>
             <span class="balance" id="headerBalance">0 G</span>
-            <button class="logout-btn" id="logoutBtn">Déconnexion</button>
+            <button class="logout-btn" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Déconnexion</button>
         </div>
     </div>
 
     <div class="tabs">
-        <div class="tab active" data-tab="play">Jouer</div>
-        <div class="tab" data-tab="history">Tickets</div>
-        <div class="tab" data-tab="results">Résultats</div>
-        <div class="tab" data-tab="profile">Profil</div>
+        <div class="tab active" data-tab="play"><i class="fas fa-gamepad"></i> Jouer</div>
+        <div class="tab" data-tab="history"><i class="fas fa-receipt"></i> Tickets</div>
+        <div class="tab" data-tab="results"><i class="fas fa-trophy"></i> Résultats</div>
+        <div class="tab" data-tab="profile"><i class="fas fa-user-circle"></i> Profil</div>
     </div>
 
     <div id="playScreen" class="screen active">
         <div class="card">
-            <div style="font-weight: 600; margin-bottom: 8px;">🎯 Choisissez un tirage</div>
+            <div style="font-weight: 700; margin-bottom: 10px;"><i class="fas fa-calendar-alt"></i> Tirage actif</div>
             <div class="draws-scroll" id="drawsList"></div>
+            <div id="drawsError" class="error-msg" style="display: none;">Aucun tirage disponible, contactez l'administrateur.</div>
         </div>
 
         <div class="card">
-            <div style="font-weight: 600; margin-bottom: 15px;">🎲 Type de jeu</div>
+            <div style="font-weight: 700; margin-bottom: 14px;"><i class="fas fa-dice"></i> Choisissez votre jeu</div>
             <!-- Borlette -->
             <div class="game-category">
-                <div class="category-title">Borlette</div>
+                <div class="category-title">🎯 Borlette</div>
                 <div class="sub-buttons">
                     <button class="game-btn" data-game="borlette">Borlette</button>
                 </div>
             </div>
             <!-- Lotto -->
             <div class="game-category">
-                <div class="category-title">Lotto</div>
+                <div class="category-title">🎲 Lotto</div>
                 <div class="sub-buttons">
                     <button class="sub-btn" data-game="lotto3">Lotto3</button>
                     <button class="sub-btn" data-game="lotto4">Lotto4</button>
@@ -101,7 +435,7 @@
             </div>
             <!-- Mariage -->
             <div class="game-category">
-                <div class="category-title">Mariage</div>
+                <div class="category-title">💍 Mariage</div>
                 <div class="sub-buttons">
                     <button class="sub-btn" data-game="mariage">Mariage</button>
                     <button class="sub-btn auto-chip" data-game="auto_marriage">Auto Mariage</button>
@@ -109,17 +443,18 @@
             </div>
             <!-- Spéciaux -->
             <div class="game-category">
-                <div class="category-title">Spéciaux</div>
+                <div class="category-title">✨ Spéciaux</div>
                 <div class="sub-buttons">
                     <button class="sub-btn" data-game="bo">BO</button>
                     <button class="sub-btn" data-game="grap">GRAP</button>
                     <button class="sub-btn" data-game="nx">Nx</button>
                 </div>
-                <div id="nxPanel" class="nx-panel" style="display: none;"></div>
             </div>
 
             <div id="optionsPanel" class="options-panel"></div>
+            <div id="nxPanel" class="nx-panel" style="display: none;"></div>
 
+            <!-- Ligne de mise très compacte (inputs courts) -->
             <div class="bet-row">
                 <input type="text" id="betNumber" placeholder="Numéro" autocomplete="off">
                 <input type="number" id="betAmount" placeholder="Montant G" autocomplete="off">
@@ -128,13 +463,13 @@
         </div>
 
         <div class="card">
-            <div style="display: flex; justify-content: space-between;">
-                <span><strong>🛒 Panier</strong> (<span id="cartCount">0</span>)</span>
-                <button id="clearCartBtn" style="background: #ef4444; padding: 6px 16px;">Vider</button>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span><strong><i class="fas fa-shopping-cart"></i> Panier</strong> (<span id="cartCount">0</span>)</span>
+                <button id="clearCartBtn" style="background: #ef4444; padding: 6px 18px; border-radius: 40px; border: none; color: white; font-weight: 600;">Vider</button>
             </div>
             <div class="cart-items" id="cartList"></div>
             <div class="cart-total">Total : <span id="cartTotal">0</span> G</div>
-            <button id="confirmBtn" class="btn-confirm">✅ Confirmer et acheter</button>
+            <button id="confirmBtn" class="btn-confirm"><i class="fas fa-check-circle"></i> Confirmer et acheter</button>
         </div>
     </div>
 
@@ -142,19 +477,18 @@
     <div id="resultsScreen" class="screen"><div id="resultsContainer"></div></div>
     <div id="profileScreen" class="screen">
         <div class="card">
-            <p><strong>👤 Nom :</strong> <span id="profileName"></span></p>
-            <p><strong>📞 Téléphone :</strong> <span id="profilePhone"></span></p>
+            <p><i class="fas fa-user"></i> <strong>Nom :</strong> <span id="profileName"></span></p>
+            <p style="margin-top: 12px;"><i class="fas fa-phone-alt"></i> <strong>Téléphone :</strong> <span id="profilePhone"></span></p>
             <div class="deposit-area">
                 <input type="text" id="rechargeCode" placeholder="Code de recharge">
-                <button id="rechargeBtn">Recharger</button>
+                <button id="rechargeBtn"><i class="fas fa-donate"></i> Recharger</button>
             </div>
-            <div style="margin-top: 16px;"><strong>💰 Solde :</strong> <span id="profileBalance" style="color:#10b981;">0 G</span></div>
+            <div style="margin-top: 18px; font-weight: 700;"><i class="fas fa-wallet"></i> Solde : <span id="profileBalance" style="color:#10b981;">0 G</span></div>
         </div>
     </div>
 </div>
 
 <script>
-    // ==================== CONFIGURATION ====================
     const API_BASE = window.location.origin + '/api';
     let token = localStorage.getItem('auth_token');
     let playerId = localStorage.getItem('player_id');
@@ -173,7 +507,6 @@
         draws: []
     };
 
-    // Helper fetch
     async function apiFetch(endpoint, options = {}) {
         const res = await fetch(`${API_BASE}${endpoint}`, {
             ...options,
@@ -185,7 +518,6 @@
         return data;
     }
 
-    // Solde
     async function refreshBalance() {
         try {
             const data = await apiFetch('/player/balance');
@@ -195,44 +527,44 @@
         } catch(e) { console.error(e); }
     }
 
-    // Charger les tirages
     async function loadDraws() {
         try {
             const data = await apiFetch('/draws');
             App.draws = data.draws;
-            renderDraws();
+            const container = document.getElementById('drawsList');
+            const errorDiv = document.getElementById('drawsError');
+            if (!App.draws.length) {
+                container.innerHTML = '';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            errorDiv.style.display = 'none';
+            container.innerHTML = App.draws.map(d => `
+                <div class="draw-chip ${App.selectedDrawId === d.id ? 'active' : ''} ${!d.active ? 'disabled' : ''}" 
+                     data-id="${d.id}" data-name="${d.name}" data-active="${d.active}">
+                    ${d.name} (${d.time.substring(0,5)}) ${!d.active ? '🔒' : ''}
+                </div>
+            `).join('');
+            document.querySelectorAll('.draw-chip').forEach(el => {
+                el.addEventListener('click', () => {
+                    const active = el.dataset.active === 'true';
+                    if (!active) { alert("Tirage fermé (2 minutes avant l'heure)"); return; }
+                    App.selectedDrawId = parseInt(el.dataset.id);
+                    App.selectedDrawName = el.dataset.name;
+                    loadDraws(); // re-render highlight
+                });
+            });
+            if (!App.selectedDrawId && App.draws.length) {
+                const firstActive = App.draws.find(d => d.active);
+                if (firstActive) {
+                    App.selectedDrawId = firstActive.id;
+                    App.selectedDrawName = firstActive.name;
+                    loadDraws();
+                }
+            }
         } catch(e) { console.error(e); alert("Erreur chargement tirages"); }
     }
 
-    function renderDraws() {
-        const container = document.getElementById('drawsList');
-        if (!container) return;
-        container.innerHTML = App.draws.map(d => `
-            <div class="draw-chip ${App.selectedDrawId === d.id ? 'active' : ''} ${!d.active ? 'disabled' : ''}" 
-                 data-id="${d.id}" data-name="${d.name}" data-active="${d.active}">
-                ${d.name} (${d.time.substring(0,5)}) ${!d.active ? '🔒' : ''}
-            </div>
-        `).join('');
-        document.querySelectorAll('.draw-chip').forEach(el => {
-            el.addEventListener('click', () => {
-                const active = el.dataset.active === 'true';
-                if (!active) { alert("Tirage fermé (3 minutes avant l'heure)"); return; }
-                App.selectedDrawId = parseInt(el.dataset.id);
-                App.selectedDrawName = el.dataset.name;
-                renderDraws();
-            });
-        });
-        if (!App.selectedDrawId && App.draws.length) {
-            const firstActive = App.draws.find(d => d.active);
-            if (firstActive) {
-                App.selectedDrawId = firstActive.id;
-                App.selectedDrawName = firstActive.name;
-                renderDraws();
-            }
-        }
-    }
-
-    // Limites & numéros bloqués
     async function loadSettingsAndLimits() {
         try {
             const settings = await apiFetch('/player/settings');
@@ -241,7 +573,6 @@
         } catch(e) { console.error(e); }
     }
 
-    // Génération automatique des paris
     function generateAutoBets(game, amount, nxDigit = null) {
         let bets = [];
         if (game === 'bo') {
@@ -272,7 +603,7 @@
         if (!App.selectedDrawId) { alert("Sélectionnez un tirage actif"); return; }
         let rawNumber = document.getElementById('betNumber').value.trim();
         let amount = parseFloat(document.getElementById('betAmount').value);
-        if (isNaN(amount) || amount <= 0) { alert("Montant invalide"); return; }
+        if (isNaN(amount) || amount <= 0) { alert("Montant valide requis"); return; }
         let game = App.selectedGame;
 
         let currentTotal = App.cart.reduce((s,b)=>s+b.amount,0) + amount;
@@ -289,24 +620,19 @@
 
         let clean = rawNumber.replace(/[^0-9&]/g, '');
 
-        // Jeux automatiques
         if (['bo','grap','auto_marriage','auto_lotto4','auto_lotto5'].includes(game)) {
             let autoBets = generateAutoBets(game, amount);
-            if (autoBets.length === 0) { alert("Aucune combinaison générée (pas assez de numéros dans le panier)"); return; }
-            for (let bet of autoBets) {
-                App.cart.push({ id: Date.now()+Math.random(), game: bet.game, cleanNumber: bet.cleanNumber, displayNumber: bet.displayNumber, amount: bet.amount });
-            }
+            if (autoBets.length === 0) { alert("Aucune combinaison générée"); return; }
+            for (let bet of autoBets) App.cart.push({ id: Date.now()+Math.random(), game: bet.game, cleanNumber: bet.cleanNumber, displayNumber: bet.displayNumber, amount: bet.amount });
             renderCart();
             document.getElementById('betNumber').value = '';
             document.getElementById('betAmount').value = '';
             return;
         }
         if (game === 'nx') {
-            if (pendingNxDigit === null) { alert("Choisissez d'abord un chiffre Nx (0-9)"); return; }
+            if (pendingNxDigit === null) { alert("Choisissez un chiffre Nx (0-9)"); return; }
             let autoBets = generateAutoBets('nx', amount, pendingNxDigit);
-            for (let bet of autoBets) {
-                App.cart.push({ id: Date.now()+Math.random(), game: bet.game, cleanNumber: bet.cleanNumber, displayNumber: bet.displayNumber, amount: bet.amount });
-            }
+            for (let bet of autoBets) App.cart.push({ id: Date.now()+Math.random(), game: bet.game, cleanNumber: bet.cleanNumber, displayNumber: bet.displayNumber, amount: bet.amount });
             renderCart();
             document.getElementById('betNumber').value = '';
             document.getElementById('betAmount').value = '';
@@ -315,7 +641,6 @@
             return;
         }
 
-        // Jeux normaux
         if (game === 'borlette') {
             if (!/^\d{2}$/.test(clean)) { alert("Borlette : 2 chiffres"); return; }
             if (App.blockedNumbers.includes(clean)) { alert(`Numéro ${clean} bloqué`); return; }
@@ -341,7 +666,6 @@
             alert("Jeu non reconnu");
             return;
         }
-
         renderCart();
         document.getElementById('betNumber').value = '';
         document.getElementById('betAmount').value = '';
@@ -373,7 +697,7 @@
         if (!App.selectedDrawId) { alert("Choisissez un tirage"); return; }
         if (App.cart.length === 0) { alert("Panier vide"); return; }
         const total = App.cart.reduce((s,b)=>s+b.amount,0);
-        if (App.playerBalance < total) { alert(`Solde insuffisant`); return; }
+        if (App.playerBalance < total) { alert("Solde insuffisant"); return; }
         const bets = App.cart.map(b => ({ game: b.game, number: b.cleanNumber, amount: b.amount, option: b.option || null }));
         try {
             const data = await apiFetch('/player/tickets/save', {
@@ -384,7 +708,7 @@
                 App.cart = [];
                 renderCart();
                 await refreshBalance();
-                alert(`✅ Achat validé ! ${total} G débités. Ticket #${data.ticket.ticket_id}`);
+                alert(`✅ Achat validé ! ${total} G débités. Ticket #${data.ticketId}`);
                 loadHistory();
             } else alert("Erreur achat");
         } catch (err) { alert("Erreur: " + err.message); }
@@ -425,7 +749,6 @@
         } catch(e) { alert("Erreur: " + e.message); }
     }
 
-    // Initialisation des sélecteurs de jeux
     function initGameSelectors() {
         document.querySelectorAll('.game-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -539,7 +862,6 @@
 
     function logout() { localStorage.clear(); window.location.href = 'index.html'; }
 
-    // Navigation
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', () => {
             const target = tab.dataset.tab;
