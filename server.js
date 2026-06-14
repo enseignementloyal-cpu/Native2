@@ -325,7 +325,7 @@ app.get('/api/player/settings', authenticatePlayer, async (req, res) => {
     });
 });
 
-// ==================== ROUTE PRINCIPALE CORRIGÉE (pas de moment.tz sur nombre) ====================
+// ==================== ROUTE PRINCIPALE CORRIGÉE (plus d'erreur de fuseau) ====================
 app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => {
     console.log('📥 Requête reçue pour sauvegarder un ticket');
     const { drawId, drawName, bets, totalAmount } = req.body;
@@ -356,7 +356,8 @@ app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => {
             hour = 0; minute = 0;
         }
         const now = moment().tz('America/Port-au-Prince');
-        const drawDateTime = moment.tz(now).set({ hour, minute, second: 0 });
+        // CORRECTION : on utilise now.clone() au lieu de moment.tz(now)
+        const drawDateTime = now.clone().set({ hour, minute, second: 0 });
         const blockFrom = drawDateTime.clone().subtract(7, 'minutes');
         console.log(`Heure actuelle: ${now.format('HH:mm:ss')}`);
         console.log(`Tirage à: ${drawDateTime.format('HH:mm:ss')}`);
