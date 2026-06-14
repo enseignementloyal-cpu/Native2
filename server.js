@@ -1,4 +1,4 @@
-// server.js - Version finale avec correction absolue du fuseau horaire et robustesse JSON
+// server.js - Version complète et stable
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
@@ -31,8 +31,9 @@ pool.on('connect', (client) => {
 
 const JWT_SECRET = process.env.JWT_SECRET || 'votre_secret_long_et_securise';
 
-// ==================== Création des tables ====================
+// ==================== Création et mise à jour des tables ====================
 async function initTables() {
+    // Owners
     await pool.query(`CREATE TABLE IF NOT EXISTS owners (id SERIAL PRIMARY KEY, name VARCHAR(100) NOT NULL, username VARCHAR(50) UNIQUE NOT NULL, password VARCHAR(255) NOT NULL, blocked BOOLEAN DEFAULT false, created_at TIMESTAMP DEFAULT NOW())`);
     const ownerExists = await pool.query('SELECT id FROM owners LIMIT 1');
     if (ownerExists.rows.length === 0) {
@@ -40,19 +41,38 @@ async function initTables() {
         await pool.query(`INSERT INTO owners (name, username, password) VALUES ($1, $2, $3)`, ['Administrateur', 'admin', hashed]);
         console.log('✅ Propriétaire par défaut: admin / admin123');
     }
+
+    // Players
     await pool.query(`CREATE TABLE IF NOT EXISTS players (id SERIAL PRIMARY KEY, name VARCHAR(100) NOT NULL, phone VARCHAR(20) UNIQUE NOT NULL, password VARCHAR(255) NOT NULL, zone VARCHAR(100), balance DECIMAL(10,2) DEFAULT 0, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW())`);
+
+    // Draws
     await pool.query(`CREATE TABLE IF NOT EXISTS draws (id SERIAL PRIMARY KEY, name VARCHAR(100) NOT NULL, time TIME NOT NULL, active BOOLEAN DEFAULT true)`);
+
+    // Winning results
     await pool.query(`CREATE TABLE IF NOT EXISTS winning_results (id SERIAL PRIMARY KEY, draw_id INTEGER REFERENCES draws(id) ON DELETE CASCADE, numbers JSONB, lotto3 VARCHAR(3), date TIMESTAMP DEFAULT NOW())`);
+
+    // Tickets
     await pool.query(`CREATE TABLE IF NOT EXISTS tickets (id SERIAL PRIMARY KEY, player_id INTEGER REFERENCES players(id) ON DELETE SET NULL, draw_id INTEGER REFERENCES draws(id) ON DELETE SET NULL, draw_name VARCHAR(100), ticket_id VARCHAR(50) UNIQUE, total_amount DECIMAL(10,2) DEFAULT 0, win_amount DECIMAL(10,2) DEFAULT 0, win_details JSONB, paid BOOLEAN DEFAULT false, checked BOOLEAN DEFAULT false, bets JSONB, date TIMESTAMP DEFAULT NOW())`);
+
+    // Transactions
     await pool.query(`CREATE TABLE IF NOT EXISTS transactions (id SERIAL PRIMARY KEY, player_id INTEGER REFERENCES players(id) ON DELETE CASCADE, type VARCHAR(20) NOT NULL CHECK (type IN ('deposit','withdraw','bet','win')), amount DECIMAL(10,2) NOT NULL, method VARCHAR(20), description TEXT, created_at TIMESTAMP DEFAULT NOW())`);
+
+    // Recharge codes
     await pool.query(`CREATE TABLE IF NOT EXISTS recharge_codes (id SERIAL PRIMARY KEY, code VARCHAR(32) UNIQUE, amount DECIMAL(10,2) NOT NULL, used BOOLEAN DEFAULT false, used_by_player_id INTEGER REFERENCES players(id) ON DELETE SET NULL, created_at TIMESTAMP DEFAULT NOW(), used_at TIMESTAMP)`);
-    await pool.query(`CREATE TABLE IF NOT EXISTS lottery_settings (id SERIAL PRIMARY KEY, name VARCHAR(100), slogan TEXT, logo_url TEXT, multipliers JSONB, limits JSONB, ads_images JSONB, announcements TEXT, advanced_settings JSONB)`);
+
+    // Lottery settings - création et ajout de la colonne manquante
+    await pool.query(`CREATE TABLE IF NOT EXISTS lottery_settings (id SERIAL PRIMARY KEY, name VARCHAR(100), slogan TEXT, logo_url TEXT, multipliers JSONB, limits JSONB, ads_images JSONB, announcements TEXT)`);
+    await pool.query(`ALTER TABLE lottery_settings ADD COLUMN IF NOT EXISTS advanced_settings JSONB`);
+
     const settingsCount = await pool.query('SELECT COUNT(*) FROM lottery_settings');
     if (parseInt(settingsCount.rows[0].count) === 0) {
         await pool.query(`INSERT INTO lottery_settings (name, slogan, multipliers, ads_images, announcements, advanced_settings) VALUES ('LOTATO PRO', 'La loterie qui fait gagner', '{"lot1":90,"lot2":50,"lot3":30,"lotto3":500,"lotto4":5000,"lotto5":25000,"mariage":500}', '[]', '', '{"freeMarriage":{"tiers":[{"min":0,"max":50,"count":1},{"min":51,"max":150,"count":2},{"min":151,"max":null,"count":3}],"winAmount":2500}}')`);
     }
+
+    // Global limits
     await pool.query(`CREATE TABLE IF NOT EXISTS global_number_limits (number VARCHAR(2) NOT NULL PRIMARY KEY, limit_amount DECIMAL(10,2) NOT NULL, updated_at TIMESTAMP DEFAULT NOW())`);
     await pool.query(`CREATE TABLE IF NOT EXISTS global_blocked_numbers (number VARCHAR(2) PRIMARY KEY)`);
+
     const drawsCount = await pool.query('SELECT COUNT(*) FROM draws');
     if (parseInt(drawsCount.rows[0].count) === 0) {
         const defaultDraws = [
@@ -67,7 +87,7 @@ async function initTables() {
         }
         console.log('✅ 10 tirages par défaut créés');
     }
-    console.log('✅ Tables prêtes');
+    console.log('✅ Tables prêtes (advanced_settings ajoutée si absente)');
 }
 
 // ==================== Cron fermeture 7 minutes avant ====================
@@ -325,7 +345,7 @@ app.get('/api/player/settings', authenticatePlayer, async (req, res) => {
     });
 });
 
-// ==================== ROUTE PRINCIPALE CORRIGÉE (fuseau + JSON robuste) ====================
+// ==================== ROUTE PRINCIPALE CORRIGÉE (fuseau horaire + JSON robuste) ====================
 app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => {
     console.log('📥 Sauvegarde ticket - body reçu :', JSON.stringify(req.body).slice(0, 200));
     const { drawId, drawName, bets, totalAmount } = req.body;
