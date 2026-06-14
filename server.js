@@ -1,4 +1,4 @@
-// server.js - LOTATO PRO (correction fuseau horaire)
+// server.js - Version finale avec correction absolue du fuseau horaire
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
@@ -31,7 +31,7 @@ pool.on('connect', (client) => {
 
 const JWT_SECRET = process.env.JWT_SECRET || 'votre_secret_long_et_securise';
 
-// Création des tables (identique à avant)
+// ==================== Création des tables ====================
 async function initTables() {
     await pool.query(`CREATE TABLE IF NOT EXISTS owners (id SERIAL PRIMARY KEY, name VARCHAR(100) NOT NULL, username VARCHAR(50) UNIQUE NOT NULL, password VARCHAR(255) NOT NULL, blocked BOOLEAN DEFAULT false, created_at TIMESTAMP DEFAULT NOW())`);
     const ownerExists = await pool.query('SELECT id FROM owners LIMIT 1');
@@ -70,7 +70,7 @@ async function initTables() {
     console.log('✅ Tables prêtes');
 }
 
-// Cron fermeture 7 minutes avant
+// ==================== Cron fermeture 7 minutes avant ====================
 cron.schedule('* * * * *', async () => {
     try {
         const result = await pool.query(`
@@ -97,7 +97,7 @@ function scheduleMidnightReactivation() {
     console.log(`⏰ Prochaine réactivation à ${midnight.format('HH:mm')} HT`);
 }
 
-// Middleware
+// ==================== Middleware ====================
 const authenticateOwner = async (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) return res.status(401).json({ error: 'Token manquant' });
@@ -122,7 +122,7 @@ const authenticatePlayer = async (req, res, next) => {
     } catch (err) { return res.status(401).json({ error: 'Token invalide' }); }
 };
 
-// Routes d'authentification
+// ==================== Routes d'authentification ====================
 app.post('/api/auth/player/register', async (req, res) => {
     const { name, phone, password, zone } = req.body;
     if (!name || !phone || !password) return res.status(400).json({ error: 'Nom, téléphone et mot de passe requis' });
@@ -160,7 +160,7 @@ app.post('/api/auth/login', async (req, res) => {
     return res.status(401).json({ error: 'Identifiants incorrects' });
 });
 
-// Routes propriétaire (simplifiées mais fonctionnelles)
+// ==================== Routes propriétaire (simplifiées) ====================
 app.get('/api/owner/draws', authenticateOwner, async (req, res) => {
     const result = await pool.query('SELECT id, name, time, active FROM draws ORDER BY time');
     res.json(result.rows);
@@ -300,7 +300,7 @@ app.get('/api/owner/stats', authenticateOwner, async (req, res) => {
     });
 });
 
-// Routes joueur
+// ==================== Routes joueur ====================
 app.get('/api/player/balance', authenticatePlayer, async (req, res) => {
     const result = await pool.query('SELECT balance FROM players WHERE id = $1', [req.player.id]);
     res.json({ balance: parseFloat(result.rows[0].balance) });
@@ -325,10 +325,9 @@ app.get('/api/player/settings', authenticatePlayer, async (req, res) => {
     });
 });
 
-// ROUTE PRINCIPALE CORRIGÉE
+// ==================== ROUTE PRINCIPALE CORRIGÉE (pas de moment.tz sur nombre) ====================
 app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => {
     console.log('📥 Requête reçue pour sauvegarder un ticket');
-    console.log('Body:', JSON.stringify(req.body, null, 2));
     const { drawId, drawName, bets, totalAmount } = req.body;
     if (!drawId || !bets || !totalAmount) {
         return res.status(400).json({ error: 'Données incomplètes' });
@@ -341,15 +340,23 @@ app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => {
         const draw = drawRes.rows[0];
         if (!draw.active) throw new Error('Ce tirage est fermé (désactivé)');
 
-        // --- CORRECTION FUSEAU HORAIRE ---
-        const now = moment().tz('America/Port-au-Prince');
-        // draw.time peut être une chaîne 'HH:MM:SS' ou un objet Date. On le convertit en chaîne.
-        let timeStr = draw.time;
-        if (typeof timeStr !== 'string') {
-            timeStr = moment(timeStr).format('HH:mm:ss');
+        // --- Extraction robuste de l'heure du tirage ---
+        let hour = 0, minute = 0;
+        if (typeof draw.time === 'string') {
+            const parts = draw.time.split(':');
+            hour = parseInt(parts[0]);
+            minute = parseInt(parts[1]);
+        } else if (draw.time instanceof Date) {
+            hour = draw.time.getHours();
+            minute = draw.time.getMinutes();
+        } else if (draw.time && typeof draw.time === 'object') {
+            hour = draw.time.getHours ? draw.time.getHours() : 0;
+            minute = draw.time.getMinutes ? draw.time.getMinutes() : 0;
+        } else {
+            hour = 0; minute = 0;
         }
-        const drawTimeMoment = moment.tz(timeStr, 'HH:mm:ss', 'America/Port-au-Prince');
-        const drawDateTime = moment.tz(now).set({ hour: drawTimeMoment.hour(), minute: drawTimeMoment.minute(), second: 0 });
+        const now = moment().tz('America/Port-au-Prince');
+        const drawDateTime = moment.tz(now).set({ hour, minute, second: 0 });
         const blockFrom = drawDateTime.clone().subtract(7, 'minutes');
         console.log(`Heure actuelle: ${now.format('HH:mm:ss')}`);
         console.log(`Tirage à: ${drawDateTime.format('HH:mm:ss')}`);
@@ -357,7 +364,7 @@ app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => {
         if (now.isAfter(drawDateTime)) throw new Error(`Tirage déjà passé (heure ${drawDateTime.format('HH:mm')})`);
         if (now.isSameOrAfter(blockFrom)) throw new Error(`Tirage fermé depuis ${blockFrom.format('HH:mm')} (7 minutes avant)`);
 
-        // Solde
+        // Vérifier solde
         const balanceRes = await client.query('SELECT balance FROM players WHERE id = $1 FOR UPDATE', [req.player.id]);
         const balance = parseFloat(balanceRes.rows[0].balance);
         if (balance < totalAmount) throw new Error(`Solde insuffisant: ${balance} G, besoin de ${totalAmount} G`);
@@ -454,7 +461,7 @@ app.post('/api/player/recharge/code', authenticatePlayer, async (req, res) => {
     } finally { client.release(); }
 });
 
-// Démarrage
+// ==================== Démarrage ====================
 initTables().then(() => {
     scheduleMidnightReactivation();
     app.listen(port, '0.0.0.0', () => {
