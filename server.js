@@ -1,4 +1,4 @@
-// server.js - Version finale avec correction absolue du fuseau horaire
+// server.js - Version finale avec correction absolue du fuseau horaire et robustesse JSON
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
@@ -160,7 +160,7 @@ app.post('/api/auth/login', async (req, res) => {
     return res.status(401).json({ error: 'Identifiants incorrects' });
 });
 
-// ==================== Routes propriétaire (simplifiées) ====================
+// ==================== Routes propriétaire ====================
 app.get('/api/owner/draws', authenticateOwner, async (req, res) => {
     const result = await pool.query('SELECT id, name, time, active FROM draws ORDER BY time');
     res.json(result.rows);
@@ -325,53 +325,60 @@ app.get('/api/player/settings', authenticatePlayer, async (req, res) => {
     });
 });
 
-// ==================== ROUTE PRINCIPALE CORRIGÉE (plus d'erreur de fuseau) ====================
+// ==================== ROUTE PRINCIPALE CORRIGÉE (fuseau + JSON robuste) ====================
 app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => {
-    console.log('📥 Requête reçue pour sauvegarder un ticket');
+    console.log('📥 Sauvegarde ticket - body reçu :', JSON.stringify(req.body).slice(0, 200));
     const { drawId, drawName, bets, totalAmount } = req.body;
-    if (!drawId || !bets || !totalAmount) {
-        return res.status(400).json({ error: 'Données incomplètes' });
+
+    if (!drawId || !bets || totalAmount === undefined) {
+        return res.status(400).json({ error: 'Données incomplètes (drawId, bets, totalAmount requis)' });
     }
+
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
+
+        // 1. Vérifier le tirage
         const drawRes = await client.query('SELECT id, time, active FROM draws WHERE id = $1', [drawId]);
         if (drawRes.rows.length === 0) throw new Error('Tirage introuvable');
         const draw = drawRes.rows[0];
         if (!draw.active) throw new Error('Ce tirage est fermé (désactivé)');
 
-        // --- Extraction robuste de l'heure du tirage ---
+        // 2. Extraction heure tirage (supporte string, Date ou objet)
         let hour = 0, minute = 0;
-        if (typeof draw.time === 'string') {
-            const parts = draw.time.split(':');
+        const timeVal = draw.time;
+        if (typeof timeVal === 'string') {
+            const parts = timeVal.split(':');
             hour = parseInt(parts[0]);
             minute = parseInt(parts[1]);
-        } else if (draw.time instanceof Date) {
-            hour = draw.time.getHours();
-            minute = draw.time.getMinutes();
-        } else if (draw.time && typeof draw.time === 'object') {
-            hour = draw.time.getHours ? draw.time.getHours() : 0;
-            minute = draw.time.getMinutes ? draw.time.getMinutes() : 0;
+        } else if (timeVal instanceof Date) {
+            hour = timeVal.getHours();
+            minute = timeVal.getMinutes();
+        } else if (timeVal && typeof timeVal === 'object') {
+            hour = timeVal.getHours ? timeVal.getHours() : 0;
+            minute = timeVal.getMinutes ? timeVal.getMinutes() : 0;
         } else {
             hour = 0; minute = 0;
         }
+
         const now = moment().tz('America/Port-au-Prince');
-        // CORRECTION : on utilise now.clone() au lieu de moment.tz(now)
         const drawDateTime = now.clone().set({ hour, minute, second: 0 });
         const blockFrom = drawDateTime.clone().subtract(7, 'minutes');
-        console.log(`Heure actuelle: ${now.format('HH:mm:ss')}`);
-        console.log(`Tirage à: ${drawDateTime.format('HH:mm:ss')}`);
-        console.log(`Blocage depuis: ${blockFrom.format('HH:mm:ss')}`);
+
+        console.log(`🕒 Heure actuelle: ${now.format('HH:mm:ss')} | Tirage à: ${drawDateTime.format('HH:mm:ss')} | Blocage depuis: ${blockFrom.format('HH:mm:ss')}`);
+
         if (now.isAfter(drawDateTime)) throw new Error(`Tirage déjà passé (heure ${drawDateTime.format('HH:mm')})`);
         if (now.isSameOrAfter(blockFrom)) throw new Error(`Tirage fermé depuis ${blockFrom.format('HH:mm')} (7 minutes avant)`);
 
-        // Vérifier solde
+        // 3. Vérifier solde
         const balanceRes = await client.query('SELECT balance FROM players WHERE id = $1 FOR UPDATE', [req.player.id]);
         const balance = parseFloat(balanceRes.rows[0].balance);
         if (balance < totalAmount) throw new Error(`Solde insuffisant: ${balance} G, besoin de ${totalAmount} G`);
+
+        // 4. Débiter le joueur
         await client.query('UPDATE players SET balance = balance - $1, updated_at = NOW() WHERE id = $2', [totalAmount, req.player.id]);
 
-        // Mariages gratuits
+        // 5. Mariages gratuits (optionnel)
         const advRes = await client.query('SELECT advanced_settings FROM lottery_settings LIMIT 1');
         let tiers = [{ min: 0, max: 50, count: 1 }, { min: 51, max: 150, count: 2 }, { min: 151, max: null, count: 3 }];
         if (advRes.rows[0]?.advanced_settings?.freeMarriage?.tiers) {
@@ -385,6 +392,7 @@ app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => {
                 break;
             }
         }
+
         const freeBets = [];
         for (let i = 0; i < freeCount; i++) {
             const n1 = Math.floor(Math.random() * 100).toString().padStart(2, '0');
@@ -392,38 +400,51 @@ app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => {
             freeBets.push({
                 game: 'auto_marriage',
                 number: `${n1}&${n2}`,
-                cleanNumber: n1 + n2,
+                cleanNumber: `${n1}${n2}`,
                 amount: 0,
                 free: true,
                 freeType: 'special_marriage',
                 freeWin: 2500
             });
         }
+
+        // 6. Normaliser les paris
         const normalizedBets = bets.map(b => ({
             ...b,
             game: b.game || (b.specialType || 'borlette'),
-            cleanNumber: b.cleanNumber || (b.number ? b.number.replace(/[^0-9&]/g, '') : ''),
-            number: b.number || b.cleanNumber
+            cleanNumber: b.cleanNumber || (b.number ? String(b.number).replace(/[^0-9&]/g, '') : ''),
+            number: b.number || b.cleanNumber,
+            amount: parseFloat(b.amount) || 0
         }));
+
         const finalBets = [...normalizedBets, ...freeBets];
-        const finalTotal = finalBets.reduce((s, b) => s + (parseFloat(b.amount) || 0), 0);
+        const finalTotal = finalBets.reduce((s, b) => s + (b.amount || 0), 0);
+
+        // 7. Générer ticket
         const ticketId = 'TKT' + Date.now() + Math.random().toString(36).substring(2, 6).toUpperCase();
         await client.query(
             `INSERT INTO tickets (player_id, draw_id, draw_name, ticket_id, total_amount, bets, checked)
              VALUES ($1, $2, $3, $4, $5, $6, false)`,
             [req.player.id, drawId, drawName, ticketId, finalTotal, JSON.stringify(finalBets)]
         );
+
         await client.query(
             `INSERT INTO transactions (player_id, type, amount, description) VALUES ($1, 'bet', $2, $3)`,
             [req.player.id, totalAmount, `Achat ticket ${ticketId} - ${drawName}`]
         );
+
         await client.query('COMMIT');
-        console.log(`✅ Ticket ${ticketId} créé avec succès, ${freeCount} mariages gratuits ajoutés`);
+        console.log(`✅ Ticket ${ticketId} créé (${freeCount} mariages gratuits)`);
         res.json({ success: true, ticketId, freeBetsAdded: freeCount });
+
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error('❌ ERREUR:', err.message);
-        res.status(403).json({ error: err.message });
+        console.error('❌ ERREUR dans /api/player/tickets/save :', err.message);
+        if (!res.headersSent) {
+            res.status(403).json({ error: err.message });
+        } else {
+            console.error('Réponse déjà envoyée, impossible de renvoyer une erreur JSON');
+        }
     } finally {
         client.release();
     }
