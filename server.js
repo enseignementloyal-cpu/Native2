@@ -1,4 +1,4 @@
-// server.js - Version complète et stable (avec logs pour tickets)
+// server.js - Version complète avec toutes les routes propriétaire
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
@@ -314,6 +314,49 @@ app.get('/api/owner/stats', authenticateOwner, async (req, res) => {
     });
 });
 
+// ==================== Routes propriétaire supplémentaires ====================
+app.get('/api/owner/players', authenticateOwner, async (req, res) => {
+    const result = await pool.query('SELECT id, name, phone, zone, balance, created_at FROM players ORDER BY created_at DESC');
+    res.json(result.rows);
+});
+
+app.get('/api/owner/tickets', authenticateOwner, async (req, res) => {
+    const result = await pool.query(`SELECT t.id, t.ticket_id, t.draw_name, t.total_amount, t.win_amount, t.checked, t.date, p.name as player_name, p.phone 
+        FROM tickets t LEFT JOIN players p ON t.player_id = p.id ORDER BY t.date DESC`);
+    res.json(result.rows);
+});
+
+app.delete('/api/owner/tickets/:id', authenticateOwner, async (req, res) => {
+    await pool.query('DELETE FROM tickets WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+});
+
+app.post('/api/owner/reports', authenticateOwner, async (req, res) => {
+    const { startDate, endDate } = req.body;
+    let whereClause = '';
+    let params = [];
+    if (startDate && endDate) {
+        whereClause = 'AND date >= $1 AND date <= $2';
+        params = [startDate, endDate];
+    }
+    try {
+        const betsQuery = await pool.query(`SELECT COALESCE(SUM(total_amount),0) as total_bets, COALESCE(SUM(win_amount),0) as total_wins FROM tickets WHERE 1=1 ${whereClause}`, params);
+        const transactionsQuery = await pool.query(`SELECT COALESCE(SUM(CASE WHEN type='deposit' THEN amount ELSE 0 END),0) as total_deposits,
+            COALESCE(SUM(CASE WHEN type='win' THEN amount ELSE 0 END),0) as total_wins_transactions
+            FROM transactions WHERE 1=1 ${whereClause.replace('AND', 'AND')}`, params);
+        res.json({
+            totalBets: parseFloat(betsQuery.rows[0].total_bets),
+            totalWins: parseFloat(betsQuery.rows[0].total_wins),
+            totalDeposits: parseFloat(transactionsQuery.rows[0].total_deposits),
+            totalWinsTransactions: parseFloat(transactionsQuery.rows[0].total_wins_transactions),
+            netProfit: parseFloat(betsQuery.rows[0].total_bets) - parseFloat(transactionsQuery.rows[0].total_wins_transactions)
+        });
+    } catch(err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erreur rapport' });
+    }
+});
+
 // ==================== Routes joueur ====================
 app.get('/api/player/balance', authenticatePlayer, async (req, res) => {
     const result = await pool.query('SELECT balance FROM players WHERE id = $1', [req.player.id]);
@@ -352,13 +395,11 @@ app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => {
     try {
         await client.query('BEGIN');
 
-        // 1. Vérifier le tirage
         const drawRes = await client.query('SELECT id, time, active FROM draws WHERE id = $1', [drawId]);
         if (drawRes.rows.length === 0) throw new Error('Tirage introuvable');
         const draw = drawRes.rows[0];
         if (!draw.active) throw new Error('Ce tirage est fermé (désactivé)');
 
-        // 2. Extraction heure tirage (supporte string, Date ou objet)
         let hour = 0, minute = 0;
         const timeVal = draw.time;
         if (typeof timeVal === 'string') {
@@ -371,8 +412,6 @@ app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => {
         } else if (timeVal && typeof timeVal === 'object') {
             hour = timeVal.getHours ? timeVal.getHours() : 0;
             minute = timeVal.getMinutes ? timeVal.getMinutes() : 0;
-        } else {
-            hour = 0; minute = 0;
         }
 
         const now = moment().tz('America/Port-au-Prince');
@@ -384,15 +423,12 @@ app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => {
         if (now.isAfter(drawDateTime)) throw new Error(`Tirage déjà passé (heure ${drawDateTime.format('HH:mm')})`);
         if (now.isSameOrAfter(blockFrom)) throw new Error(`Tirage fermé depuis ${blockFrom.format('HH:mm')} (7 minutes avant)`);
 
-        // 3. Vérifier solde
         const balanceRes = await client.query('SELECT balance FROM players WHERE id = $1 FOR UPDATE', [req.player.id]);
         const balance = parseFloat(balanceRes.rows[0].balance);
         if (balance < totalAmount) throw new Error(`Solde insuffisant: ${balance} G, besoin de ${totalAmount} G`);
 
-        // 4. Débiter le joueur
         await client.query('UPDATE players SET balance = balance - $1, updated_at = NOW() WHERE id = $2', [totalAmount, req.player.id]);
 
-        // 5. Mariages gratuits (optionnel)
         const advRes = await client.query('SELECT advanced_settings FROM lottery_settings LIMIT 1');
         let tiers = [{ min: 0, max: 50, count: 1 }, { min: 51, max: 150, count: 2 }, { min: 151, max: null, count: 3 }];
         if (advRes.rows[0]?.advanced_settings?.freeMarriage?.tiers) {
@@ -422,7 +458,6 @@ app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => {
             });
         }
 
-        // 6. Normaliser les paris
         const normalizedBets = bets.map(b => ({
             ...b,
             game: b.game || (b.specialType || 'borlette'),
@@ -434,7 +469,6 @@ app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => {
         const finalBets = [...normalizedBets, ...freeBets];
         const finalTotal = finalBets.reduce((s, b) => s + (b.amount || 0), 0);
 
-        // 7. Générer ticket
         const ticketId = 'TKT' + Date.now() + Math.random().toString(36).substring(2, 6).toUpperCase();
         await client.query(
             `INSERT INTO tickets (player_id, draw_id, draw_name, ticket_id, total_amount, bets, checked)
@@ -456,8 +490,6 @@ app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => {
         console.error('❌ ERREUR dans /api/player/tickets/save :', err.message);
         if (!res.headersSent) {
             res.status(403).json({ error: err.message });
-        } else {
-            console.error('Réponse déjà envoyée, impossible de renvoyer une erreur JSON');
         }
     } finally {
         client.release();

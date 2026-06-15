@@ -8,7 +8,7 @@
     <style>
         * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
         body { background:#0a0b1e; color:#fff; padding:20px; }
-        .app { max-width: 1200px; margin:0 auto; }
+        .app { max-width: 1400px; margin:0 auto; }
         header { display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; background:rgba(255,255,255,0.05); border-radius:20px; padding:20px; }
         .logo h1 { font-size:1.8rem; background:linear-gradient(135deg,#ad00f1,#00d4ff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
         .logout-btn { background:rgba(255,77,77,0.2); border:1px solid #ff4d4d; color:#ff4d4d; padding:10px 20px; border-radius:30px; cursor:pointer; }
@@ -26,12 +26,14 @@
         .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:20px; margin-bottom:30px; }
         .stat-card { background:rgba(255,255,255,0.05); border-radius:16px; padding:20px; text-align:center; }
         .stat-value { font-size:2rem; font-weight:bold; }
-        .list-container { background:rgba(255,255,255,0.02); border-radius:16px; padding:15px; max-height:300px; overflow-y:auto; }
-        .item-row { display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid rgba(255,255,255,0.05); }
+        .list-container { background:rgba(255,255,255,0.02); border-radius:16px; padding:15px; max-height:500px; overflow-y:auto; }
+        .item-row { display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid rgba(255,255,255,0.05); flex-wrap:wrap; gap:10px; }
         .code-display { background:#1e1f3a; padding:15px; border-radius:12px; font-family:monospace; font-size:1.2rem; text-align:center; margin-top:10px; }
         .image-preview { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
         .image-preview img { max-height:60px; border-radius:8px; }
         .remove-img { background:#ff4d4d; border:none; color:white; border-radius:20px; padding:2px 8px; margin-left:5px; cursor:pointer; }
+        .report-result { background:rgba(0,0,0,0.2); padding:15px; border-radius:16px; margin-top:20px; }
+        .report-line { margin:10px 0; font-size:1.1rem; }
     </style>
 </head>
 <body>
@@ -43,12 +45,15 @@
 
     <div class="tabs">
         <div class="tab active" onclick="switchTab('dashboard')">📊 Dashboard</div>
-        <div class="tab" onclick="switchTab('draws')">🎲 Tirages (activer/désactiver)</div>
+        <div class="tab" onclick="switchTab('draws')">🎲 Tirages</div>
         <div class="tab" onclick="switchTab('results')">📢 Publier résultats</div>
         <div class="tab" onclick="switchTab('limits')">🔢 Limites & Blocages</div>
         <div class="tab" onclick="switchTab('codes')">💳 Codes recharge</div>
         <div class="tab" onclick="switchTab('settings')">⚙️ Paramètres</div>
         <div class="tab" onclick="switchTab('ads')">📢 Publicité & Annonces</div>
+        <div class="tab" onclick="switchTab('tickets')">🎫 Tickets</div>
+        <div class="tab" onclick="switchTab('players')">👥 Joueurs</div>
+        <div class="tab" onclick="switchTab('reports')">📈 Rapports</div>
     </div>
 
     <!-- Dashboard -->
@@ -62,7 +67,7 @@
         </div>
     </div>
 
-    <!-- Gestion des tirages (sans création) -->
+    <!-- Gestion des tirages -->
     <div id="draws-tab" class="tab-content">
         <h3>Activer / Désactiver un tirage</h3>
         <div id="draws-list" class="list-container"></div>
@@ -141,6 +146,47 @@
         <button class="btn-primary" onclick="saveAnnouncement()">Enregistrer annonce</button>
         <div id="ads-message" style="margin-top:10px;"></div>
     </div>
+
+    <!-- Tickets list -->
+    <div id="tickets-tab" class="tab-content">
+        <h3>Tous les tickets</h3>
+        <div id="tickets-list" class="list-container"></div>
+    </div>
+
+    <!-- Joueurs list -->
+    <div id="players-tab" class="tab-content">
+        <h3>Tous les joueurs</h3>
+        <div id="players-list" class="list-container"></div>
+    </div>
+
+    <!-- Rapports -->
+    <div id="reports-tab" class="tab-content">
+        <h3>Rapports financiers</h3>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Période</label>
+                <select id="report-period">
+                    <option value="day">Aujourd'hui</option>
+                    <option value="week">Cette semaine</option>
+                    <option value="month">Ce mois</option>
+                    <option value="custom">Personnalisé</option>
+                </select>
+            </div>
+            <div id="custom-dates" style="display:none;" class="form-group">
+                <label>Date début</label>
+                <input type="date" id="start-date">
+                <label>Date fin</label>
+                <input type="date" id="end-date">
+            </div>
+            <button class="btn-primary" onclick="loadReport()">Générer rapport</button>
+        </div>
+        <div id="report-result" class="report-result">
+            <div class="report-line">💰 Total des mises : <span id="report-total-bets">0</span> G</div>
+            <div class="report-line">🏆 Total des gains versés : <span id="report-total-wins">0</span> G</div>
+            <div class="report-line">💳 Total des dépôts (codes) : <span id="report-total-deposits">0</span> G</div>
+            <div class="report-line">📈 Bénéfice net (mises - gains) : <span id="report-net-profit">0</span> G</div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -205,7 +251,6 @@
             const res = await fetchAPI('/owner/publish-results', { method: 'POST', body: JSON.stringify({ drawId, numbers, lotto3 }) });
             if (res.success) {
                 document.getElementById('publish-message').innerHTML = '<span style="color:green;">✅ Résultats publiés et gains calculés !</span>';
-                // Vider les champs si souhaité
                 document.getElementById('lot1').value = '';
                 document.getElementById('lot2').value = '';
                 document.getElementById('lot3').value = '';
@@ -355,6 +400,82 @@
         else document.getElementById('ads-message').innerHTML = '<span style="color:red;">❌ Erreur</span>';
     }
 
+    // Nouvelles fonctions
+    async function loadTickets() {
+        const tickets = await fetchAPI('/owner/tickets');
+        const container = document.getElementById('tickets-list');
+        if (!tickets.length) { container.innerHTML = '<p>Aucun ticket</p>'; return; }
+        container.innerHTML = tickets.map(t => `
+            <div class="item-row">
+                <div><strong>${t.ticket_id}</strong> - ${t.player_name || 'Inconnu'} (${t.phone || '-'})<br>
+                Tirage: ${t.draw_name} | Mise: ${t.total_amount} G | Gain: ${t.win_amount} G | ${t.checked ? 'Vérifié' : 'En attente'}<br>
+                Date: ${new Date(t.date).toLocaleString()}</div>
+                <button class="btn-danger" onclick="deleteTicket(${t.id})">Supprimer</button>
+            </div>
+        `).join('');
+    }
+
+    async function deleteTicket(id) {
+        if (!confirm('Supprimer ce ticket ?')) return;
+        await fetchAPI(`/owner/tickets/${id}`, { method: 'DELETE' });
+        loadTickets();
+    }
+
+    async function loadPlayers() {
+        const players = await fetchAPI('/owner/players');
+        const container = document.getElementById('players-list');
+        if (!players.length) { container.innerHTML = '<p>Aucun joueur</p>'; return; }
+        container.innerHTML = players.map(p => `
+            <div class="item-row">
+                <div><strong>${p.name}</strong> - ${p.phone} | Solde: ${p.balance} G | Zone: ${p.zone || '-'}<br>Inscrit: ${new Date(p.created_at).toLocaleDateString()}</div>
+            </div>
+        `).join('');
+    }
+
+    // Gestion des rapports
+    document.getElementById('report-period').addEventListener('change', function() {
+        document.getElementById('custom-dates').style.display = this.value === 'custom' ? 'block' : 'none';
+    });
+
+    async function loadReport() {
+        const period = document.getElementById('report-period').value;
+        let startDate = null, endDate = null;
+        const today = new Date();
+        if (period === 'day') {
+            const start = new Date(today);
+            start.setHours(0,0,0,0);
+            const end = new Date(today);
+            end.setHours(23,59,59,999);
+            startDate = start.toISOString();
+            endDate = end.toISOString();
+        } else if (period === 'week') {
+            const start = new Date(today);
+            start.setDate(today.getDate() - today.getDay());
+            start.setHours(0,0,0,0);
+            const end = new Date(start);
+            end.setDate(start.getDate() + 6);
+            end.setHours(23,59,59,999);
+            startDate = start.toISOString();
+            endDate = end.toISOString();
+        } else if (period === 'month') {
+            const start = new Date(today.getFullYear(), today.getMonth(), 1);
+            const end = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23,59,59,999);
+            startDate = start.toISOString();
+            endDate = end.toISOString();
+        } else if (period === 'custom') {
+            startDate = document.getElementById('start-date').value;
+            endDate = document.getElementById('end-date').value;
+            if (!startDate || !endDate) { alert('Choisissez les dates'); return; }
+            startDate = new Date(startDate).toISOString();
+            endDate = new Date(endDate + 'T23:59:59').toISOString();
+        }
+        const data = await fetchAPI('/owner/reports', { method: 'POST', body: JSON.stringify({ startDate, endDate }) });
+        document.getElementById('report-total-bets').innerText = data.totalBets.toLocaleString();
+        document.getElementById('report-total-wins').innerText = data.totalWins.toLocaleString();
+        document.getElementById('report-total-deposits').innerText = data.totalDeposits.toLocaleString();
+        document.getElementById('report-net-profit').innerText = data.netProfit.toLocaleString();
+    }
+
     function switchTab(tab) {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -364,6 +485,9 @@
         if (tab === 'draws') loadDrawsList();
         if (tab === 'limits') { loadGlobalLimits(); loadBlockedNumbers(); }
         if (tab === 'ads') loadAdsSettings();
+        if (tab === 'tickets') loadTickets();
+        if (tab === 'players') loadPlayers();
+        if (tab === 'reports') loadReport();
     }
 
     function logout() { localStorage.clear(); window.location.href = 'index.html'; }
@@ -392,6 +516,10 @@
     window.addAdImage = addAdImage;
     window.removeAdImage = removeAdImage;
     window.saveAnnouncement = saveAnnouncement;
+    window.loadTickets = loadTickets;
+    window.deleteTicket = deleteTicket;
+    window.loadPlayers = loadPlayers;
+    window.loadReport = loadReport;
     window.logout = logout;
 </script>
 </body>
