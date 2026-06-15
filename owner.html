@@ -43,7 +43,7 @@
 
     <div class="tabs">
         <div class="tab active" onclick="switchTab('dashboard')">📊 Dashboard</div>
-        <div class="tab" onclick="switchTab('draws')">🎲 Tirages</div>
+        <div class="tab" onclick="switchTab('draws')">🎲 Tirages (activer/désactiver)</div>
         <div class="tab" onclick="switchTab('results')">📢 Publier résultats</div>
         <div class="tab" onclick="switchTab('limits')">🔢 Limites & Blocages</div>
         <div class="tab" onclick="switchTab('codes')">💳 Codes recharge</div>
@@ -62,16 +62,11 @@
         </div>
     </div>
 
-    <!-- Gestion des tirages -->
+    <!-- Gestion des tirages (sans création) -->
     <div id="draws-tab" class="tab-content">
-        <h3>Créer un tirage</h3>
-        <div class="form-grid">
-            <div class="form-group"><label>Nom</label><input type="text" id="draw-name" placeholder="Ex: Matin"></div>
-            <div class="form-group"><label>Heure (HH:MM)</label><input type="time" id="draw-time"></div>
-            <button class="btn-primary" onclick="createDraw()">Ajouter</button>
-        </div>
-        <h3>Tirages existants</h3>
+        <h3>Activer / Désactiver un tirage</h3>
         <div id="draws-list" class="list-container"></div>
+        <p style="margin-top:10px; color:#aaa;">Les tirages sont ajoutés directement dans la base de données.</p>
     </div>
 
     <!-- Publier résultats -->
@@ -84,6 +79,7 @@
             <div class="form-group"><label>Lotto3 (3 chiffres)</label><input type="text" id="lotto3-result" maxlength="3" placeholder="123"></div>
             <button class="btn-primary" onclick="publishResults()">Publier & calculer gains</button>
         </div>
+        <div id="publish-message" style="margin-top:10px;"></div>
     </div>
 
     <!-- Limites et blocages -->
@@ -140,7 +136,7 @@
             <button class="btn-primary" onclick="addAdImage()">Ajouter image</button>
         </div>
         <div id="ads-images-list" class="image-preview"></div>
-        <h3 style="margin-top:20px;">Annonce texte</h3>
+        <h3 style="margin-top:20px;">Annonce texte (défilante)</h3>
         <div class="form-group"><textarea id="announcement-text" rows="3" placeholder="Annonce importante..."></textarea></div>
         <button class="btn-primary" onclick="saveAnnouncement()">Enregistrer annonce</button>
         <div id="ads-message" style="margin-top:10px;"></div>
@@ -185,16 +181,6 @@
         if (select) select.innerHTML = draws.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
     }
 
-    async function createDraw() {
-        const name = document.getElementById('draw-name').value;
-        const time = document.getElementById('draw-time').value;
-        if (!name || !time) { alert('Nom et heure requis'); return; }
-        await fetchAPI('/owner/draws', { method: 'POST', body: JSON.stringify({ name, time }) });
-        loadDrawsList();
-        document.getElementById('draw-name').value = '';
-        document.getElementById('draw-time').value = '';
-    }
-
     async function toggleDraw(id) {
         await fetchAPI(`/owner/draws/${id}/toggle`, { method: 'PUT' });
         loadDrawsList();
@@ -202,15 +188,34 @@
 
     async function publishResults() {
         const drawId = document.getElementById('publish-draw').value;
-        const lot1 = document.getElementById('lot1').value.padStart(2,'0');
-        const lot2 = document.getElementById('lot2').value.padStart(2,'0');
-        const lot3 = document.getElementById('lot3').value.padStart(2,'0');
-        const lotto3 = document.getElementById('lotto3-result').value.padStart(3,'0');
-        if (!drawId || !lot1 || !lot2 || !lot3 || !lotto3) { alert('Remplissez tous les champs'); return; }
+        let lot1 = document.getElementById('lot1').value.trim();
+        let lot2 = document.getElementById('lot2').value.trim();
+        let lot3 = document.getElementById('lot3').value.trim();
+        let lotto3 = document.getElementById('lotto3-result').value.trim();
+        if (!drawId || !lot1 || !lot2 || !lot3 || !lotto3) {
+            document.getElementById('publish-message').innerHTML = '<span style="color:red;">Remplissez tous les champs</span>';
+            return;
+        }
+        lot1 = lot1.padStart(2,'0');
+        lot2 = lot2.padStart(2,'0');
+        lot3 = lot3.padStart(2,'0');
+        lotto3 = lotto3.padStart(3,'0');
         const numbers = [lot1, lot2, lot3];
-        const res = await fetchAPI('/owner/publish-results', { method: 'POST', body: JSON.stringify({ drawId, numbers, lotto3 }) });
-        if (res.success) alert('Résultats publiés et gains calculés !');
-        else alert('Erreur: ' + (res.error || ''));
+        try {
+            const res = await fetchAPI('/owner/publish-results', { method: 'POST', body: JSON.stringify({ drawId, numbers, lotto3 }) });
+            if (res.success) {
+                document.getElementById('publish-message').innerHTML = '<span style="color:green;">✅ Résultats publiés et gains calculés !</span>';
+                // Vider les champs si souhaité
+                document.getElementById('lot1').value = '';
+                document.getElementById('lot2').value = '';
+                document.getElementById('lot3').value = '';
+                document.getElementById('lotto3-result').value = '';
+            } else {
+                document.getElementById('publish-message').innerHTML = '<span style="color:red;">❌ Erreur : ' + (res.error || '') + '</span>';
+            }
+        } catch(e) {
+            document.getElementById('publish-message').innerHTML = '<span style="color:red;">Erreur lors de la publication</span>';
+        }
     }
 
     async function loadGlobalLimits() {
@@ -375,7 +380,6 @@
     })();
 
     window.switchTab = switchTab;
-    window.createDraw = createDraw;
     window.toggleDraw = toggleDraw;
     window.publishResults = publishResults;
     window.addGlobalLimit = addGlobalLimit;

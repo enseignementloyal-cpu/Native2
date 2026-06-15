@@ -6,55 +6,281 @@
     <title>LOTATO · Joueur</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>
     <style>
-        /* (gardez le même CSS que précédemment, inchangé) */
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',sans-serif; }
-        body { background:linear-gradient(145deg,#eef2f9 0%,#e0e7f0 100%); padding-bottom:80px; }
-        .app { max-width:550px; margin:0 auto; background:#fff; min-height:100vh; border-radius:0 0 32px 32px; overflow:hidden; }
-        .header { background:linear-gradient(135deg,#0b1120 0%,#1a2639 100%); color:white; padding:20px 22px 18px; position:sticky; top:0; z-index:20; }
-        .header h1 { font-size:1.6rem; font-weight:700; display:flex; align-items:center; gap:10px; }
-        .balance-row { display:flex; justify-content:space-between; align-items:center; margin-top:12px; font-size:0.9rem; }
-        .balance { background:rgba(255,255,255,0.12); backdrop-filter:blur(4px); padding:5px 16px; border-radius:40px; font-weight:600; }
-        .logout-btn { background:rgba(239,68,68,0.15); border:1px solid #ef4444; color:#fecaca; padding:5px 14px; border-radius:40px; cursor:pointer; font-weight:500; }
-        .logout-btn:hover { background:#ef4444; color:white; }
-        .tabs { display:flex; background:white; border-bottom:1px solid #e9edf2; position:sticky; top:84px; z-index:15; padding:0 12px; }
-        .tab { flex:1; text-align:center; padding:14px 0 12px; font-weight:600; color:#6c7a91; cursor:pointer; border-bottom:3px solid transparent; font-size:0.9rem; }
-        .tab.active { color:#3b82f6; border-bottom-color:#3b82f6; background:rgba(59,130,246,0.04); }
-        .screen { display:none; padding:20px; background:#f9fbfe; min-height:calc(100vh - 140px); }
-        .screen.active { display:block; }
-        .card { background:white; border-radius:28px; padding:20px; margin-bottom:20px; box-shadow:0 5px 12px rgba(0,0,0,0.03),0 0 0 1px rgba(0,0,0,0.02); }
-        .draws-scroll { display:flex; gap:12px; overflow-x:auto; padding:8px 2px 12px; scrollbar-width:thin; }
-        .draw-chip { background:#f1f4f9; border-radius:60px; padding:8px 22px; white-space:nowrap; font-weight:600; cursor:pointer; border:1px solid #e2e8f0; font-size:0.85rem; }
-        .draw-chip.active { background:#3b82f6; color:white; border-color:#3b82f6; }
-        .draw-chip.disabled { opacity:0.5; text-decoration:line-through; cursor:not-allowed; }
-        .game-category { margin-bottom:20px; }
-        .category-title { font-weight:700; margin-bottom:10px; font-size:0.85rem; color:#2c3e66; }
-        .sub-buttons { display:flex; flex-wrap:wrap; gap:10px; }
-        .game-btn, .sub-btn { background:#f0f3f8; border:1px solid #e2e8f0; padding:6px 18px; border-radius:40px; font-size:0.8rem; font-weight:600; cursor:pointer; }
-        .game-btn.active, .sub-btn.active { background:#3b82f6; color:white; }
-        .sub-btn.auto-chip { background:#fef9e3; border-color:#fbbf24; color:#b45309; }
-        .options-panel { display:flex; gap:12px; margin:15px 0 10px; flex-wrap:wrap; }
-        .option-chip { background:#eef2ff; padding:6px 18px; border-radius:40px; font-size:0.8rem; font-weight:500; cursor:pointer; }
-        .option-chip.active { background:#3b82f6; color:white; }
-        .bet-row { display:flex; gap:10px; margin:18px 0 8px; align-items:center; flex-wrap:wrap; }
-        .bet-row input { width:120px; padding:12px; border:1px solid #cbd5e1; border-radius:48px; font-size:0.9rem; text-align:center; }
-        .btn-add-icon { background:#3b82f6; border:none; border-radius:50%; width:48px; height:48px; display:flex; align-items:center; justify-content:center; color:white; font-size:1.8rem; cursor:pointer; }
-        .cart-items { max-height:240px; overflow-y:auto; margin:15px 0; }
-        .cart-item { background:#f8fafc; border-radius:60px; padding:10px 16px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; }
-        .cart-total { background:#eef2ff; border-radius:60px; padding:12px; text-align:center; font-weight:800; margin:12px 0; }
-        .btn-confirm { background:#10b981; width:100%; padding:14px; border-radius:60px; font-weight:800; border:none; color:white; cursor:pointer; }
-        .history-card, .result-card { background:white; border-radius:24px; padding:16px; margin-bottom:12px; }
-        .badge { display:inline-block; padding:4px 14px; border-radius:60px; font-size:0.7rem; font-weight:700; }
-        .badge-win { background:#d1fae5; color:#065f46; }
-        .badge-loss { background:#fee2e2; color:#991b1b; }
-        .badge-wait { background:#fef3c7; color:#92400e; }
-        .deposit-area { margin-top:20px; padding-top:16px; border-top:1px solid #eef2ff; display:flex; gap:12px; }
-        .deposit-area input { flex:2; padding:12px; border-radius:60px; border:1px solid #cbd5e1; }
-        .deposit-area button { flex:1; background:#10b981; border:none; border-radius:60px; color:white; font-weight:700; cursor:pointer; }
-        .nx-panel { display:flex; flex-wrap:wrap; gap:10px; margin:12px 0; }
-        .nx-digit { background:#eef2ff; padding:8px 18px; border-radius:40px; cursor:pointer; font-weight:700; }
-        .error-msg { color:#dc2626; font-size:0.75rem; margin-top:8px; text-align:center; }
-        .empty-msg { text-align:center; color:#6c7a91; padding:20px; }
+        body {
+            background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+            padding-bottom: 80px;
+            min-height: 100vh;
+        }
+        .app {
+            max-width: 550px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.95);
+            min-height: 100vh;
+            border-radius: 0 0 32px 32px;
+            overflow: hidden;
+            box-shadow: 0 25px 40px rgba(0,0,0,0.2);
+        }
+        /* Header avec dégradé animé */
+        .header {
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+            color: white;
+            padding: 20px 22px 18px;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .header h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .balance-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            font-size: 0.9rem;
+        }
+        .balance {
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(4px);
+            padding: 5px 16px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        .logout-btn {
+            background: rgba(239,68,68,0.2);
+            border: 1px solid #ef4444;
+            color: #fecaca;
+            padding: 5px 14px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: 0.2s;
+        }
+        .logout-btn:hover {
+            background: #ef4444;
+            color: white;
+        }
+        /* Carrousel publicitaire */
+        .carousel-container {
+            background: #00000010;
+            border-radius: 20px;
+            margin: 15px 15px 0;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .carousel-slides {
+            display: flex;
+            transition: transform 0.5s ease-in-out;
+        }
+        .carousel-slide {
+            min-width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+            padding: 15px;
+        }
+        .carousel-slide img {
+            max-height: 120px;
+            width: auto;
+            max-width: 90%;
+            border-radius: 16px;
+            object-fit: contain;
+        }
+        .carousel-text {
+            background: #fef9c3;
+            color: #854d0e;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 30px;
+            margin: 0 15px 15px;
+            text-align: center;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.02); background: #fde047; }
+            100% { opacity: 0.8; transform: scale(1); }
+        }
+        /* Tabs modernes */
+        .tabs {
+            display: flex;
+            background: white;
+            border-bottom: 1px solid #e9edf2;
+            position: sticky;
+            top: 84px;
+            z-index: 15;
+            padding: 0 12px;
+        }
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 14px 0 12px;
+            font-weight: 600;
+            color: #6c7a91;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: 0.2s;
+        }
+        .tab.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+            background: rgba(59,130,246,0.04);
+        }
+        /* Écrans */
+        .screen {
+            display: none;
+            padding: 20px;
+            background: #f8fafc;
+            min-height: calc(100vh - 140px);
+        }
+        .screen.active {
+            display: block;
+        }
+        /* Cartes */
+        .card {
+            background: white;
+            border-radius: 28px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            transition: transform 0.1s ease;
+        }
+        /* Tirages */
+        .draws-scroll {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding: 8px 2px 12px;
+            scrollbar-width: thin;
+        }
+        .draw-chip {
+            background: #f1f4f9;
+            border-radius: 60px;
+            padding: 8px 22px;
+            white-space: nowrap;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid #e2e8f0;
+            transition: 0.2s;
+        }
+        .draw-chip.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59,130,246,0.4);
+        }
+        .draw-chip.disabled {
+            opacity: 0.5;
+            text-decoration: line-through;
+            cursor: not-allowed;
+        }
+        /* Jeux */
+        .game-category { margin-bottom: 20px; }
+        .category-title { font-weight: 700; margin-bottom: 10px; color: #1e293b; }
+        .sub-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+        .game-btn, .sub-btn {
+            background: #f0f3f8;
+            border: 1px solid #e2e8f0;
+            padding: 6px 18px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .game-btn.active, .sub-btn.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+            transform: scale(0.98);
+        }
+        .sub-btn.auto-chip {
+            background: #fef9e3;
+            border-color: #fbbf24;
+            color: #b45309;
+        }
+        /* Options */
+        .options-panel { display: flex; gap: 12px; margin: 15px 0 10px; flex-wrap: wrap; }
+        .option-chip {
+            background: #eef2ff;
+            padding: 6px 18px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .option-chip.active { background: #3b82f6; color: white; }
+        /* Mise */
+        .bet-row { display: flex; gap: 10px; margin: 18px 0 8px; align-items: center; flex-wrap: wrap; }
+        .bet-row input {
+            width: 120px; padding: 12px; border: 1px solid #cbd5e1;
+            border-radius: 48px; font-size: 0.9rem; text-align: center;
+        }
+        .btn-add-icon {
+            background: #3b82f6; border: none; border-radius: 50%; width: 48px; height: 48px;
+            display: flex; align-items: center; justify-content: center; color: white;
+            font-size: 1.8rem; cursor: pointer; transition: 0.2s;
+        }
+        .btn-add-icon:hover { background: #2563eb; transform: scale(1.05); }
+        /* Panier */
+        .cart-items { max-height: 240px; overflow-y: auto; margin: 15px 0; }
+        .cart-item {
+            background: #f8fafc; border-radius: 60px; padding: 10px 16px;
+            margin-bottom: 8px; display: flex; justify-content: space-between;
+            align-items: center; border: 1px solid #e2edf7;
+        }
+        .cart-total {
+            background: #eef2ff; border-radius: 60px; padding: 12px;
+            text-align: center; font-weight: 800; margin: 12px 0;
+        }
+        .btn-confirm {
+            background: #10b981; width: 100%; padding: 14px;
+            border-radius: 60px; font-weight: 800; border: none;
+            color: white; cursor: pointer; transition: 0.2s;
+        }
+        .btn-confirm:active { transform: scale(0.97); }
+        /* Historique et résultats */
+        .history-card, .result-card {
+            background: white; border-radius: 24px; padding: 16px;
+            margin-bottom: 12px; border-left: 5px solid #3b82f6;
+        }
+        .badge {
+            display: inline-block; padding: 4px 14px; border-radius: 60px;
+            font-size: 0.7rem; font-weight: 700;
+        }
+        .badge-win { background: #d1fae5; color: #065f46; }
+        .badge-loss { background: #fee2e2; color: #991b1b; }
+        .badge-wait { background: #fef3c7; color: #92400e; }
+        /* Profil */
+        .deposit-area {
+            margin-top: 20px; padding-top: 16px; border-top: 1px solid #eef2ff;
+            display: flex; gap: 12px;
+        }
+        .deposit-area input { flex: 2; padding: 12px; border-radius: 60px; border: 1px solid #cbd5e1; }
+        .deposit-area button { flex: 1; background: #10b981; border: none; border-radius: 60px; color: white; font-weight: 700; cursor: pointer; }
+        .nx-panel { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
+        .nx-digit { background: #eef2ff; padding: 8px 18px; border-radius: 40px; cursor: pointer; font-weight: 700; }
+        .error-msg { color: #dc2626; font-size: 0.75rem; margin-top: 8px; text-align: center; }
+        .empty-msg { text-align: center; color: #6c7a91; padding: 20px; }
+        /* Animation de gain */
+        @keyframes bounce {
+            0%,100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .win-animation {
+            animation: bounce 0.5s ease;
+        }
     </style>
 </head>
 <body>
@@ -67,6 +293,12 @@
             <button class="logout-btn" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Déconnexion</button>
         </div>
     </div>
+
+    <!-- Carrousel publicitaire -->
+    <div class="carousel-container" id="carouselContainer" style="display: none;">
+        <div class="carousel-slides" id="carouselSlides"></div>
+    </div>
+    <div class="carousel-text" id="announcementText" style="display: none;"></div>
 
     <div class="tabs">
         <div class="tab active" data-tab="play"><i class="fas fa-gamepad"></i> Jouer</div>
@@ -137,6 +369,83 @@
         draws: []
     };
 
+    // ----- Carrousel et annonces -----
+    let carouselInterval = null;
+    let currentSlide = 0;
+    let adsImages = [];
+    let announcement = "";
+
+    async function loadCarouselAndAnnouncement() {
+        try {
+            const settings = await apiFetch('/player/settings');
+            adsImages = settings.adsImages || [];
+            announcement = settings.announcements || "";
+            const carouselDiv = document.getElementById('carouselContainer');
+            const slidesDiv = document.getElementById('carouselSlides');
+            const textDiv = document.getElementById('announcementText');
+            if (adsImages.length > 0) {
+                carouselDiv.style.display = 'block';
+                slidesDiv.innerHTML = adsImages.map(url => `<div class="carousel-slide"><img src="${url}" alt="pub"></div>`).join('');
+                if (carouselInterval) clearInterval(carouselInterval);
+                carouselInterval = setInterval(() => {
+                    currentSlide = (currentSlide + 1) % adsImages.length;
+                    slidesDiv.style.transform = `translateX(-${currentSlide * 100}%)`;
+                }, 4000);
+            } else {
+                carouselDiv.style.display = 'none';
+            }
+            if (announcement && announcement.trim() !== "") {
+                textDiv.style.display = 'block';
+                textDiv.innerText = announcement;
+            } else {
+                textDiv.style.display = 'none';
+            }
+        } catch(e) { console.error(e); }
+    }
+
+    // ----- Animation gain/perte -----
+    function showWinAnimation(amount) {
+        canvasConfetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#10b981', '#fbbf24'] });
+        const msg = document.createElement('div');
+        msg.innerText = `🎉 GAGNÉ ${amount} G ! 🎉`;
+        msg.style.position = 'fixed';
+        msg.style.top = '30%';
+        msg.style.left = '50%';
+        msg.style.transform = 'translate(-50%, -50%)';
+        msg.style.backgroundColor = '#10b981';
+        msg.style.color = 'white';
+        msg.style.padding = '15px 25px';
+        msg.style.borderRadius = '60px';
+        msg.style.fontWeight = 'bold';
+        msg.style.zIndex = '9999';
+        msg.style.boxShadow = '0 0 20px rgba(0,0,0,0.3)';
+        document.body.appendChild(msg);
+        setTimeout(() => msg.remove(), 2500);
+    }
+    function showLossAnimation() {
+        document.body.style.animation = 'shake 0.3s ease-in-out 0s 2';
+        setTimeout(() => { document.body.style.animation = ''; }, 600);
+        const msg = document.createElement('div');
+        msg.innerText = '😞 Pas de chance...';
+        msg.style.position = 'fixed';
+        msg.style.top = '30%';
+        msg.style.left = '50%';
+        msg.style.transform = 'translate(-50%, -50%)';
+        msg.style.backgroundColor = '#ef4444';
+        msg.style.color = 'white';
+        msg.style.padding = '15px 25px';
+        msg.style.borderRadius = '60px';
+        msg.style.fontWeight = 'bold';
+        msg.style.zIndex = '9999';
+        document.body.appendChild(msg);
+        setTimeout(() => msg.remove(), 2000);
+    }
+    // Ajout de l'animation shake
+    const styleShake = document.createElement('style');
+    styleShake.textContent = `@keyframes shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); } 80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); } 100% { transform: translate(1px, -2px) rotate(-1deg); } }`;
+    document.head.appendChild(styleShake);
+
+    // ----- API -----
     async function apiFetch(endpoint, options = {}) {
         const res = await fetch(`${API_BASE}${endpoint}`, {
             ...options,
@@ -208,6 +517,7 @@
         } catch(e) { console.error(e); }
     }
 
+    // ----- Gestion des paris (inchangée mais adaptée) -----
     function generateAutoBets(game, amount, nxDigit = null) {
         let bets = [];
         if (game === 'bo') {
@@ -350,13 +660,15 @@
         try {
             const data = await apiFetch('/player/tickets');
             const tickets = data.tickets;
-            if (!tickets.length) { container.innerHTML = '<div class="empty-msg">Aucun ticket pour le moment</div>'; return; }
+            if (!tickets || !tickets.length) { container.innerHTML = '<div class="empty-msg">Aucun ticket pour le moment</div>'; return; }
             container.innerHTML = tickets.map(t => {
                 const win = t.win_amount || 0;
                 let status = !t.checked ? '<span class="badge badge-wait">En attente</span>' : (win > 0 ? `<span class="badge badge-win">Gagné ${win} G</span>` : '<span class="badge badge-loss">Perdu</span>');
                 const preview = (t.bets || []).slice(0,2).map(b => `${b.game} ${b.number}`).join(', ');
                 return `<div class="history-card"><div><strong>${t.draw_name}</strong> ${status}</div><div style="font-size:0.75rem;">📅 ${new Date(t.date).toLocaleString()}</div><div>🎲 ${preview} | Total: ${t.total_amount} G</div>${win>0?`<div style="color:#10b981;">💰 Gain: ${win} G</div>`:''}</div>`;
             }).join('');
+            // Vérifier si on doit afficher animation (si ticket vient d'être consulté avec win)
+            // Pour l'exemple, on ne le fait pas ici car c'est au chargement.
         } catch(e) {
             console.error(e);
             container.innerHTML = '<div class="empty-msg">Erreur chargement des tickets</div>';
@@ -498,7 +810,7 @@
 
     function logout() { localStorage.clear(); window.location.href = 'index.html'; }
 
-    // Event listeners
+    // --- Event listeners tabs ---
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', () => {
             const target = tab.dataset.tab;
@@ -522,8 +834,12 @@
         await refreshProfile();
         await loadDraws();
         await loadSettingsAndLimits();
+        await loadCarouselAndAnnouncement();
         initGameSelectors();
         setupAutoFocus();
+        // On charge history et results en arrière-plan
+        loadHistory();
+        loadResults();
     })();
 </script>
 </body>

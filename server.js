@@ -1,4 +1,4 @@
-// server.js - Version complète et stable
+// server.js - Version complète et stable (avec logs pour tickets)
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
@@ -184,12 +184,6 @@ app.post('/api/auth/login', async (req, res) => {
 app.get('/api/owner/draws', authenticateOwner, async (req, res) => {
     const result = await pool.query('SELECT id, name, time, active FROM draws ORDER BY time');
     res.json(result.rows);
-});
-app.post('/api/owner/draws', authenticateOwner, async (req, res) => {
-    const { name, time } = req.body;
-    if (!name || !time) return res.status(400).json({ error: 'Nom et heure requis' });
-    await pool.query('INSERT INTO draws (name, time, active) VALUES ($1, $2, true)', [name, time]);
-    res.json({ success: true });
 });
 app.put('/api/owner/draws/:id/toggle', authenticateOwner, async (req, res) => {
     await pool.query('UPDATE draws SET active = NOT active WHERE id = $1', [req.params.id]);
@@ -471,13 +465,20 @@ app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => {
 });
 
 app.get('/api/player/tickets', authenticatePlayer, async (req, res) => {
-    const result = await pool.query(`SELECT id, draw_name, total_amount, win_amount, win_details, checked, bets, date FROM tickets WHERE player_id = $1 ORDER BY date DESC`, [req.player.id]);
-    const tickets = result.rows.map(t => ({
-        ...t,
-        win_details: typeof t.win_details === 'string' ? JSON.parse(t.win_details) : t.win_details,
-        bets: typeof t.bets === 'string' ? JSON.parse(t.bets) : t.bets
-    }));
-    res.json({ tickets });
+    console.log('📋 Récupération des tickets pour joueur:', req.player.id);
+    try {
+        const result = await pool.query(`SELECT id, draw_name, total_amount, win_amount, win_details, checked, bets, date FROM tickets WHERE player_id = $1 ORDER BY date DESC`, [req.player.id]);
+        const tickets = result.rows.map(t => ({
+            ...t,
+            win_details: typeof t.win_details === 'string' ? JSON.parse(t.win_details) : t.win_details,
+            bets: typeof t.bets === 'string' ? JSON.parse(t.bets) : t.bets
+        }));
+        console.log(`✅ ${tickets.length} ticket(s) trouvé(s)`);
+        res.json({ tickets });
+    } catch (err) {
+        console.error('❌ Erreur récupération tickets:', err);
+        res.status(500).json({ error: 'Erreur interne' });
+    }
 });
 app.get('/api/winners/results', authenticatePlayer, async (req, res) => {
     const results = await pool.query(`SELECT w.*, d.name FROM winning_results w JOIN draws d ON w.draw_id = d.id ORDER BY w.date DESC LIMIT 50`);
