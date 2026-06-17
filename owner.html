@@ -248,20 +248,22 @@
         lot2 = lot2.padStart(2,'0');
         lot3 = lot3.padStart(2,'0');
         lotto3 = lotto3.padStart(3,'0');
-        const numbers = [lot1, lot2, lot3];
         try {
-            const res = await fetchAPI('/owner/publish-results', { method: 'POST', body: JSON.stringify({ drawId, numbers, lotto3 }) });
+            const res = await fetchAPI('/owner/publish-results', {
+                method: 'POST',
+                body: JSON.stringify({ drawId, numbers: [lot1, lot2, lot3], lotto3 })
+            });
             if (res.success) {
-                document.getElementById('publish-message').innerHTML = '<span style="color:green;">✅ Résultats publiés et gains calculés !</span>';
+                document.getElementById('publish-message').innerHTML = '<span style="color:green;">✅ Résultats publiés</span>';
                 document.getElementById('lot1').value = '';
                 document.getElementById('lot2').value = '';
                 document.getElementById('lot3').value = '';
                 document.getElementById('lotto3-result').value = '';
             } else {
-                document.getElementById('publish-message').innerHTML = '<span style="color:red;">❌ Erreur : ' + (res.error || '') + '</span>';
+                document.getElementById('publish-message').innerHTML = `<span style="color:red;">❌ Erreur: ${res.error}</span>`;
             }
-        } catch(e) {
-            document.getElementById('publish-message').innerHTML = '<span style="color:red;">Erreur lors de la publication</span>';
+        } catch (e) {
+            document.getElementById('publish-message').innerHTML = `<span style="color:red;">Erreur: ${e.message}</span>`;
         }
     }
 
@@ -402,7 +404,6 @@
         else document.getElementById('ads-message').innerHTML = '<span style="color:red;">❌ Erreur</span>';
     }
 
-    // Nouvelles fonctions
     async function loadTickets() {
         const tickets = await fetchAPI('/owner/tickets');
         const container = document.getElementById('tickets-list');
@@ -434,7 +435,6 @@
         `).join('');
     }
 
-    // Gestion des rapports
     document.getElementById('report-period').addEventListener('change', function() {
         document.getElementById('custom-dates').style.display = this.value === 'custom' ? 'block' : 'none';
     });
@@ -444,10 +444,8 @@
         let startDate = null, endDate = null;
         const today = new Date();
         if (period === 'day') {
-            const start = new Date(today);
-            start.setHours(0,0,0,0);
-            const end = new Date(today);
-            end.setHours(23,59,59,999);
+            const start = new Date(today); start.setHours(0,0,0,0);
+            const end = new Date(today); end.setHours(23,59,59,999);
             startDate = start.toISOString();
             endDate = end.toISOString();
         } else if (period === 'week') {
@@ -477,8 +475,8 @@
             document.getElementById('report-total-wins').innerText = data.totalWins.toLocaleString();
             document.getElementById('report-total-deposits').innerText = data.totalDeposits.toLocaleString();
             document.getElementById('report-net-profit').innerText = data.netProfit.toLocaleString();
-        } catch(e) {
-            alert('Erreur chargement rapport: ' + e.message);
+        } catch (e) {
+            alert('Erreur rapport: ' + e.message);
         }
     }
 

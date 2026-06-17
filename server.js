@@ -171,66 +171,34 @@ app.put('/api/owner/draws/:id/toggle', authenticateOwner, async (req, res) => {
     res.json({ success: true });
 });
 app.post('/api/owner/publish-results', authenticateOwner, async (req, res) => {
+    console.log('📢 Publication résultats - body reçu:', req.body);
     const { drawId, numbers, lotto3 } = req.body;
-    if (!drawId || !numbers || !lotto3) return res.status(400).json({ error: 'Données incomplètes' });
+    if (!drawId || !numbers || !lotto3) {
+        return res.status(400).json({ error: 'Données incomplètes' });
+    }
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-        await client.query(`INSERT INTO winning_results (draw_id, numbers, lotto3) VALUES ($1, $2, $3)`, [drawId, JSON.stringify(numbers), lotto3]);
-        const ticketsRes = await client.query(`SELECT * FROM tickets WHERE draw_id = $1 AND checked = false`, [drawId]);
-        const settings = await client.query(`SELECT multipliers, advanced_settings FROM lottery_settings LIMIT 1`);
-        const mult = settings.rows[0]?.multipliers || { lot1:90, lot2:50, lot3:30, lotto3:500, lotto4:5000, lotto5:25000, mariage:500 };
-        let freeMarriageWin = 2500;
-        if (settings.rows[0]?.advanced_settings?.freeMarriage?.winAmount) freeMarriageWin = parseInt(settings.rows[0].advanced_settings.freeMarriage.winAmount);
-        const [lot1, lot2, lot3num] = numbers;
-        const lotto3Str = lotto3;
+        await client.query(
+            `INSERT INTO winning_results (draw_id, numbers, lotto3) VALUES ($1, $2, $3)`,
+            [drawId, JSON.stringify(numbers), lotto3]
+        );
+        const ticketsRes = await client.query(
+            `SELECT * FROM tickets WHERE draw_id = $1 AND checked = false`,
+            [drawId]
+        );
+        console.log(`📄 ${ticketsRes.rows.length} tickets à traiter`);
         for (const ticket of ticketsRes.rows) {
-            let totalWin = 0;
-            const win_details = [];
-            const bets = typeof ticket.bets === 'string' ? JSON.parse(ticket.bets) : ticket.bets;
-            for (const bet of bets) {
-                let win = 0, reason = '';
-                const amt = parseFloat(bet.amount) || 0;
-                const game = bet.game || bet.specialType;
-                const clean = bet.cleanNumber || (bet.number ? bet.number.replace(/[^0-9&]/g, '') : '');
-                if (game === 'borlette' || game === 'BO' || (game && game.startsWith('n'))) {
-                    if (clean === lot1) { win = amt * mult.lot1; reason = 'lot1'; }
-                    else if (clean === lot2) { win = amt * mult.lot2; reason = 'lot2'; }
-                    else if (clean === lot3num) { win = amt * mult.lot3; reason = 'lot3'; }
-                    if (win) win_details.push({ game, number: clean, gain: win, reason });
-                } else if (game === 'lotto3' && clean === lotto3Str) {
-                    win = amt * mult.lotto3;
-                    win_details.push({ game, number: clean, gain: win, reason: 'lotto3' });
-                } else if ((game === 'lotto4' || game === 'auto_lotto4') && clean.length === 4) {
-                    const combos = [lot1+lot2, lot2+lot3num, lot1+lot3num];
-                    if (combos.includes(clean)) { win = amt * mult.lotto4; win_details.push({ game, number: clean, gain: win, reason: `lotto4_opt${bet.option}` }); }
-                } else if ((game === 'lotto5' || game === 'auto_lotto5') && clean.length === 5) {
-                    const combos = [lotto3Str.slice(0,3)+lot2, lotto3Str.slice(0,3)+lot3num];
-                    if (combos.includes(clean)) { win = amt * mult.lotto5; win_details.push({ game, number: clean, gain: win, reason: `lotto5_opt${bet.option}` }); }
-                } else if (game === 'mariage' || game === 'auto_marriage') {
-                    const [a,b] = clean.split('&');
-                    const pairs = [lot1, lot2, lot3num];
-                    let found = false;
-                    for (let i=0;i<3;i++) for(let j=0;j<3;j++) if(i!==j && a===pairs[i] && b===pairs[j]) found=true;
-                    if (found) {
-                        if (bet.free && bet.freeType === 'special_marriage') win = freeMarriageWin;
-                        else win = amt * mult.mariage;
-                        win_details.push({ game, number: clean, gain: win, reason: 'mariage', free: !!bet.free });
-                    }
-                }
-                totalWin += win;
-            }
-            if (totalWin > 0) {
-                await client.query(`UPDATE players SET balance = balance + $1 WHERE id = $2`, [totalWin, ticket.player_id]);
-                await client.query(`INSERT INTO transactions (player_id, type, amount, description) VALUES ($1, 'win', $2, $3)`, [ticket.player_id, totalWin, `Gain tirage ${drawId}`]);
-            }
-            await client.query(`UPDATE tickets SET win_amount = $1, checked = true, win_details = $2 WHERE id = $3`, [totalWin, JSON.stringify(win_details), ticket.id]);
+            await client.query(
+                `UPDATE tickets SET checked = true WHERE id = $1`,
+                [ticket.id]
+            );
         }
         await client.query('COMMIT');
-        res.json({ success: true });
+        res.json({ success: true, message: 'Résultats publiés' });
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error('Erreur publication:', err);
+        console.error('❌ Erreur publication:', err);
         res.status(500).json({ error: err.message });
     } finally {
         client.release();
@@ -313,27 +281,28 @@ app.delete('/api/owner/tickets/:id', authenticateOwner, async (req, res) => {
     res.json({ success: true });
 });
 app.post('/api/owner/reports', authenticateOwner, async (req, res) => {
+    console.log('📊 Rapport - body reçu:', req.body);
     const { startDate, endDate } = req.body;
     try {
-        let whereClause = '';
+        let where = '';
         let params = [];
         if (startDate && endDate) {
-            whereClause = 'WHERE date >= $1 AND date <= $2';
+            where = 'WHERE date >= $1 AND date <= $2';
             params = [startDate, endDate];
         }
-        const betsResult = await pool.query(`SELECT COALESCE(SUM(total_amount),0) as total_bets FROM tickets ${whereClause}`, params);
-        const winsResult = await pool.query(`SELECT COALESCE(SUM(win_amount),0) as total_wins FROM tickets ${whereClause}`, params);
-        const depositsResult = await pool.query(`SELECT COALESCE(SUM(amount),0) as total_deposits FROM transactions WHERE type = 'deposit' ${whereClause ? 'AND ' + whereClause.substring(6) : ''}`, params);
-        const winsTransResult = await pool.query(`SELECT COALESCE(SUM(amount),0) as total_wins_trans FROM transactions WHERE type = 'win' ${whereClause ? 'AND ' + whereClause.substring(6) : ''}`, params);
+        const bets = await pool.query(`SELECT COALESCE(SUM(total_amount),0) as total FROM tickets ${where}`, params);
+        const wins = await pool.query(`SELECT COALESCE(SUM(win_amount),0) as total FROM tickets ${where}`, params);
+        const deposits = await pool.query(`SELECT COALESCE(SUM(amount),0) as total FROM transactions WHERE type='deposit' ${where ? 'AND ' + where.substring(6) : ''}`, params);
+        const winsTrans = await pool.query(`SELECT COALESCE(SUM(amount),0) as total FROM transactions WHERE type='win' ${where ? 'AND ' + where.substring(6) : ''}`, params);
         res.json({
-            totalBets: parseFloat(betsResult.rows[0].total_bets),
-            totalWins: parseFloat(winsResult.rows[0].total_wins),
-            totalDeposits: parseFloat(depositsResult.rows[0].total_deposits),
-            totalWinsTransactions: parseFloat(winsTransResult.rows[0].total_wins_trans),
-            netProfit: parseFloat(betsResult.rows[0].total_bets) - parseFloat(winsTransResult.rows[0].total_wins_trans)
+            totalBets: parseFloat(bets.rows[0].total),
+            totalWins: parseFloat(wins.rows[0].total),
+            totalDeposits: parseFloat(deposits.rows[0].total),
+            totalWinsTransactions: parseFloat(winsTrans.rows[0].total),
+            netProfit: parseFloat(bets.rows[0].total) - parseFloat(winsTrans.rows[0].total)
         });
     } catch (err) {
-        console.error('Erreur rapport:', err);
+        console.error('❌ Erreur rapport:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -348,22 +317,31 @@ app.get('/api/draws', authenticatePlayer, async (req, res) => {
     res.json({ draws: result.rows });
 });
 app.get('/api/player/settings', authenticatePlayer, async (req, res) => {
-    const settings = await pool.query('SELECT name, slogan, logo_url, multipliers, announcements, ads_images, advanced_settings FROM lottery_settings LIMIT 1');
-    const limits = await pool.query('SELECT number, limit_amount FROM global_number_limits');
-    const blocked = await pool.query('SELECT number FROM global_blocked_numbers');
-    const globalLimits = {};
-    limits.rows.forEach(l => { globalLimits[l.number] = parseFloat(l.limit_amount); });
-    res.json({
-        name: settings.rows[0]?.name || 'LOTATO',
-        slogan: settings.rows[0]?.slogan || '',
-        logoUrl: settings.rows[0]?.logo_url || '',
-        multipliers: settings.rows[0]?.multipliers || {},
-        announcements: settings.rows[0]?.announcements || '',
-        adsImages: settings.rows[0]?.ads_images || [],
-        globalLimits,
-        blockedNumbers: blocked.rows.map(b => b.number),
-        advancedSettings: settings.rows[0]?.advanced_settings || {}
-    });
+    try {
+        const settings = await pool.query(
+            `SELECT name, slogan, logo_url, multipliers, announcements, ads_images, advanced_settings 
+             FROM lottery_settings LIMIT 1`
+        );
+        const limits = await pool.query('SELECT number, limit_amount FROM global_number_limits');
+        const blocked = await pool.query('SELECT number FROM global_blocked_numbers');
+        const globalLimits = {};
+        limits.rows.forEach(l => { globalLimits[l.number] = parseFloat(l.limit_amount); });
+        const row = settings.rows[0] || {};
+        res.json({
+            name: row.name || 'LOTATO',
+            slogan: row.slogan || '',
+            logoUrl: row.logo_url || '',
+            multipliers: row.multipliers || {},
+            announcements: row.announcements || '',
+            adsImages: row.ads_images || [],
+            globalLimits,
+            blockedNumbers: blocked.rows.map(b => b.number),
+            advancedSettings: row.advanced_settings || {}
+        });
+    } catch (err) {
+        console.error('❌ Erreur settings:', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ==================== ROUTE PRINCIPALE CORRIGÉE ====================
@@ -464,19 +442,23 @@ app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => {
 });
 
 app.get('/api/player/tickets', authenticatePlayer, async (req, res) => {
-    console.log('📋 Récupération des tickets pour joueur:', req.player.id);
+    console.log('📋 Tickets pour joueur:', req.player.id);
     try {
-        const result = await pool.query(`SELECT id, draw_name, total_amount, win_amount, win_details, checked, bets, date FROM tickets WHERE player_id = $1 ORDER BY date DESC`, [req.player.id]);
+        const result = await pool.query(
+            `SELECT id, draw_name, total_amount, win_amount, win_details, checked, bets, date 
+             FROM tickets WHERE player_id = $1 ORDER BY date DESC`,
+            [req.player.id]
+        );
         const tickets = result.rows.map(t => ({
             ...t,
             win_details: typeof t.win_details === 'string' ? JSON.parse(t.win_details) : t.win_details,
             bets: typeof t.bets === 'string' ? JSON.parse(t.bets) : t.bets
         }));
-        console.log(`✅ ${tickets.length} ticket(s) trouvé(s)`);
+        console.log(`✅ ${tickets.length} ticket(s) trouvés`);
         res.json({ tickets });
     } catch (err) {
         console.error('❌ Erreur récupération tickets:', err);
-        res.status(500).json({ error: 'Erreur interne' });
+        res.status(500).json({ error: err.message });
     }
 });
 app.get('/api/winners/results', authenticatePlayer, async (req, res) => {

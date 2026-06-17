@@ -78,6 +78,7 @@
         <div id="slogan" style="font-size:0.75rem; margin-top:6px; opacity:0.8;"></div>
     </div>
 
+    <!-- Carrousel publicitaire -->
     <div class="carousel-container" id="carouselContainer" style="display: none;">
         <div class="carousel-slides" id="carouselSlides"></div>
     </div>
@@ -224,10 +225,9 @@
             const settings = await apiFetch('/player/settings');
             App.globalLimits = settings.globalLimits || {};
             App.blockedNumbers = settings.blockedNumbers || [];
-            // Mettre à jour le nom et slogan
             document.getElementById('lottery-name').innerText = settings.name || 'LOTATO';
             document.getElementById('slogan').innerText = settings.slogan || '';
-            // Carrousel et annonces
+            // Carrousel
             adsImages = settings.adsImages || [];
             const announcement = settings.announcements || "";
             const carouselDiv = document.getElementById('carouselContainer');
@@ -235,7 +235,7 @@
             const textDiv = document.getElementById('announcementText');
             if (adsImages.length > 0) {
                 carouselDiv.style.display = 'block';
-                slidesDiv.innerHTML = adsImages.map(url => `<div class="carousel-slide"><img src="${url}" alt="pub"></div>`).join('');
+                slidesDiv.innerHTML = adsImages.map(url => `<div class="carousel-slide"><img src="${url}" alt="pub" onerror="this.style.display='none'"></div>`).join('');
                 if (carouselInterval) clearInterval(carouselInterval);
                 carouselInterval = setInterval(() => {
                     currentSlide = (currentSlide + 1) % adsImages.length;
@@ -253,6 +253,7 @@
         } catch(e) { console.error(e); }
     }
 
+    // ----- Gestion des paris -----
     function generateAutoBets(game, amount, nxDigit = null) {
         let bets = [];
         if (game === 'bo') {
@@ -543,6 +544,7 @@
 
     function logout() { localStorage.clear(); window.location.href = 'index.html'; }
 
+    // --- Event listeners ---
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', () => {
             const target = tab.dataset.tab;
@@ -562,6 +564,7 @@
     document.getElementById('rechargeBtn').addEventListener('click', rechargeWithCode);
     document.getElementById('logoutBtn').addEventListener('click', logout);
 
+    // --- Initialisation ---
     (async function init() {
         await refreshProfile();
         await loadDraws();
