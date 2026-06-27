@@ -466,34 +466,37 @@
     let allResults = [];
     let selectedDay = null;
 
-    function getDayLabel(dateStr) {
-        const d = new Date(dateStr);
+    function getDayLabel(dateKey) {
+        // dateKey = "YYYY-MM-DD"
         const today = new Date();
-        const yesterday = new Date();
-        yesterday.setDate(today.getDate() - 1);
-        const fmt = (x) => x.toDateString();
-        if (fmt(d) === fmt(today)) return "Aujourd'hui";
-        if (fmt(d) === fmt(yesterday)) return "Hier";
-        return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' });
+        const todayKey = today.toISOString().slice(0, 10);
+        const yest = new Date(today); yest.setDate(today.getDate() - 1);
+        const yesterdayKey = yest.toISOString().slice(0, 10);
+        if (dateKey === todayKey) return "Aujourd'hui";
+        if (dateKey === yesterdayKey) return "Hier";
+        const d = new Date(dateKey + 'T12:00:00');
+        return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
     }
 
     function getDayKey(dateStr) {
+        // Convertir en heure locale Haiti pour grouper correctement
         const d = new Date(dateStr);
-        return d.toISOString().slice(0, 10); // YYYY-MM-DD
+        const offset = -5; // Haiti UTC-5
+        const local = new Date(d.getTime() + offset * 60 * 60 * 1000);
+        return local.toISOString().slice(0, 10);
     }
 
     function renderResults() {
         const container = document.getElementById('resultsContainer');
         const filtered = selectedDay
             ? allResults.filter(r => getDayKey(r.date) === selectedDay)
-            : allResults.filter(r => getDayKey(r.date) === getDayKey(new Date().toISOString()));
+            : [];
 
         if (!filtered.length) {
             container.innerHTML = '<div class="empty-msg"><i class="fas fa-trophy" style="font-size:2rem;opacity:0.2;"></i><br>Aucun résultat pour ce jour</div>';
             return;
         }
 
-        // Grouper par tirage dans ce jour
         let html = '';
         filtered.forEach(r => {
             const nums = Array.isArray(r.numbers) ? r.numbers : [];
@@ -519,35 +522,31 @@
         const container = document.getElementById('resultsContainer');
         const filterBar = document.getElementById('dayFilterBar');
         container.innerHTML = '<div class="empty-msg"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>';
+        filterBar.innerHTML = '';
         try {
             const data = await apiFetch('/winners/results');
             allResults = data.results || [];
 
             if (!allResults.length) {
-                filterBar.innerHTML = '';
                 container.innerHTML = '<div class="empty-msg"><i class="fas fa-trophy" style="font-size:2rem;opacity:0.2;"></i><br>Aucun résultat publié</div>';
                 return;
             }
 
-            // Construire les 7 derniers jours disponibles
-            const today = new Date();
-            const days = [];
-            for (let i = 0; i < 7; i++) {
-                const d = new Date(today);
-                d.setDate(today.getDate() - i);
-                const key = d.toISOString().slice(0, 10);
-                const hasResults = allResults.some(r => getDayKey(r.date) === key);
-                if (hasResults || i === 0) {
-                    days.push({ key, label: getDayLabel(d.toISOString()), hasResults });
-                }
+            // Extraire les jours uniques qui ont des résultats (max 7)
+            const seenDays = [];
+            allResults.forEach(r => {
+                const key = getDayKey(r.date);
+                if (!seenDays.includes(key)) seenDays.push(key);
+            });
+            const days = seenDays.slice(0, 7); // 7 derniers jours avec résultats
+
+            // Sélectionner le jour le plus récent par défaut
+            if (!selectedDay || !days.includes(selectedDay)) {
+                selectedDay = days[0];
             }
 
-            // Sélectionner aujourd'hui par défaut
-            if (!selectedDay) selectedDay = getDayKey(new Date().toISOString());
-
-            filterBar.innerHTML = days.map(d =>
-                `<div class="day-chip ${d.key === selectedDay ? 'active' : ''} ${!d.hasResults ? 'style="opacity:0.45;"' : ''}"
-                      data-day="${d.key}">${d.label}${d.hasResults ? '' : ' <small style="font-size:0.65rem;opacity:0.7;">vide</small>'}</div>`
+            filterBar.innerHTML = days.map(key =>
+                `<div class="day-chip ${key === selectedDay ? 'active' : ''}" data-day="${key}">${getDayLabel(key)}</div>`
             ).join('');
 
             document.querySelectorAll('.day-chip').forEach(chip => {

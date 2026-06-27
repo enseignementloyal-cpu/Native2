@@ -467,17 +467,39 @@ app.get('/api/player/tickets', authenticatePlayer, async (req, res) => {
     console.log('📋 Récupération des tickets pour joueur:', req.player.id);
     function safeParseJSON(val, fallback) {
         if (!val) return fallback;
-        if (typeof val === 'object') return val;
+        if (typeof val === 'object' && !Buffer.isBuffer(val)) return val;
         try { return JSON.parse(val); } catch(e) { return fallback; }
     }
     try {
+        // Vérifier quelles colonnes existent réellement
+        const colCheck = await pool.query(`
+            SELECT column_name FROM information_schema.columns
+            WHERE table_name = 'tickets'
+        `);
+        const cols = colCheck.rows.map(r => r.column_name);
+        const hasWinDetails = cols.includes('win_details');
+        const hasTicketId   = cols.includes('ticket_id');
+
+        // Ajouter win_details si elle n'existe pas
+        if (!hasWinDetails) {
+            await pool.query(`ALTER TABLE tickets ADD COLUMN IF NOT EXISTS win_details JSONB`);
+            console.log('✅ Colonne win_details ajoutée');
+        }
+
+        const selectCols = [
+            'id',
+            hasTicketId ? 'ticket_id' : "CONCAT('TKT', id) AS ticket_id",
+            'draw_name',
+            'total_amount::float AS total_amount',
+            'win_amount::float AS win_amount',
+            'win_details::text AS win_details',
+            'checked',
+            'bets::text AS bets',
+            'date'
+        ].join(', ');
+
         const result = await pool.query(
-            `SELECT id, ticket_id, draw_name,
-                    total_amount::float AS total_amount,
-                    win_amount::float AS win_amount,
-                    win_details::text AS win_details,
-                    checked, bets::text AS bets, date
-             FROM tickets WHERE player_id = $1 ORDER BY date DESC`,
+            `SELECT ${selectCols} FROM tickets WHERE player_id = $1 ORDER BY date DESC`,
             [req.player.id]
         );
         const tickets = result.rows.map(t => ({
@@ -504,12 +526,12 @@ app.get('/api/winners/results', authenticatePlayer, async (req, res) => {
             `SELECT w.id, w.draw_id, w.numbers::text AS numbers, w.lotto3, w.date, d.name
              FROM winning_results w
              JOIN draws d ON w.draw_id = d.id
-             WHERE w.date >= NOW() AT TIME ZONE 'America/Port-au-Prince' - INTERVAL '7 days'
-             ORDER BY w.date DESC`
+             ORDER BY w.date DESC
+             LIMIT 200`
         );
         const rows = results.rows.map(r => ({
             ...r,
-            numbers: typeof r.numbers === 'string' ? JSON.parse(r.numbers) : r.numbers
+            numbers: typeof r.numbers === 'string' ? JSON.parse(r.numbers) : (r.numbers || [])
         }));
         res.json({ results: rows });
     } catch (err) {
