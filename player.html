@@ -67,6 +67,18 @@
         .nx-digit { background:#eef2ff; padding:8px 18px; border-radius:40px; cursor:pointer; font-weight:700; }
         .error-msg { color:#dc2626; font-size:0.75rem; margin-top:8px; text-align:center; }
         .empty-msg { text-align:center; color:#6c7a91; padding:20px; }
+        .day-filter-bar { display:flex; gap:8px; overflow-x:auto; padding:0 4px 10px; scrollbar-width:none; margin-bottom:4px; }
+        .day-filter-bar::-webkit-scrollbar { display:none; }
+        .day-chip { background:#f1f4f9; border:1px solid #e2e8f0; border-radius:40px; padding:7px 16px; font-size:0.78rem; font-weight:600; white-space:nowrap; cursor:pointer; transition:0.2s; color:#475569; }
+        .day-chip.active { background:#312e81; color:white; border-color:#312e81; }
+        .result-day-header { font-weight:700; color:#1e293b; font-size:0.85rem; margin:14px 0 8px; padding-left:4px; border-left:4px solid #3b82f6; padding-left:10px; }
+        .result-card { border-left:5px solid #10b981; }
+        .result-numbers { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+        .result-ball { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.9rem; }
+        .ball-1 { background:#fef3c7; color:#92400e; border:2px solid #fbbf24; }
+        .ball-2 { background:#dbeafe; color:#1e40af; border:2px solid #93c5fd; }
+        .ball-3 { background:#fce7f3; color:#9d174d; border:2px solid #f9a8d4; }
+        .ball-lotto3 { background:#f0fdf4; color:#14532d; border:2px solid #86efac; border-radius:10px; width:auto; padding:0 12px; }
         @keyframes shake { 0% { transform:translate(1px,1px) rotate(0deg); } 10% { transform:translate(-1px,-2px) rotate(-1deg); } 20% { transform:translate(-3px,0px) rotate(1deg); } 30% { transform:translate(3px,2px) rotate(0deg); } 40% { transform:translate(1px,-1px) rotate(1deg); } 50% { transform:translate(-1px,2px) rotate(-1deg); } 60% { transform:translate(-3px,1px) rotate(0deg); } 70% { transform:translate(3px,1px) rotate(-1deg); } 80% { transform:translate(-1px,-1px) rotate(1deg); } 90% { transform:translate(1px,2px) rotate(0deg); } 100% { transform:translate(1px,-2px) rotate(-1deg); } }
     </style>
 </head>
@@ -125,7 +137,10 @@
     </div>
 
     <div id="historyScreen" class="screen"><div id="historyContainer" class="empty-msg">Chargement...</div></div>
-    <div id="resultsScreen" class="screen"><div id="resultsContainer" class="empty-msg">Chargement...</div></div>
+    <div id="resultsScreen" class="screen">
+        <div class="day-filter-bar" id="dayFilterBar"></div>
+        <div id="resultsContainer" class="empty-msg">Chargement...</div>
+    </div>
     <div id="profileScreen" class="screen">
         <div class="card">
             <p><i class="fas fa-user"></i> <strong>Nom :</strong> <span id="profileName"></span></p>
@@ -448,16 +463,106 @@
         }
     }
 
+    let allResults = [];
+    let selectedDay = null;
+
+    function getDayLabel(dateStr) {
+        const d = new Date(dateStr);
+        const today = new Date();
+        const yesterday = new Date();
+        yesterday.setDate(today.getDate() - 1);
+        const fmt = (x) => x.toDateString();
+        if (fmt(d) === fmt(today)) return "Aujourd'hui";
+        if (fmt(d) === fmt(yesterday)) return "Hier";
+        return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' });
+    }
+
+    function getDayKey(dateStr) {
+        const d = new Date(dateStr);
+        return d.toISOString().slice(0, 10); // YYYY-MM-DD
+    }
+
+    function renderResults() {
+        const container = document.getElementById('resultsContainer');
+        const filtered = selectedDay
+            ? allResults.filter(r => getDayKey(r.date) === selectedDay)
+            : allResults.filter(r => getDayKey(r.date) === getDayKey(new Date().toISOString()));
+
+        if (!filtered.length) {
+            container.innerHTML = '<div class="empty-msg"><i class="fas fa-trophy" style="font-size:2rem;opacity:0.2;"></i><br>Aucun résultat pour ce jour</div>';
+            return;
+        }
+
+        // Grouper par tirage dans ce jour
+        let html = '';
+        filtered.forEach(r => {
+            const nums = Array.isArray(r.numbers) ? r.numbers : [];
+            const time = new Date(r.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            html += `<div class="result-card">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <strong style="color:#1e293b;">${r.name}</strong>
+                    <span style="font-size:0.75rem;color:#6c7a91;">🕐 ${time}</span>
+                </div>
+                <div class="result-numbers">
+                    <div class="result-ball ball-1" title="1er lot">${nums[0] || '--'}</div>
+                    <div class="result-ball ball-2" title="2e lot">${nums[1] || '--'}</div>
+                    <div class="result-ball ball-3" title="3e lot">${nums[2] || '--'}</div>
+                    <div class="result-ball ball-lotto3" title="Lotto3">L3: ${r.lotto3 || '---'}</div>
+                </div>
+                <div style="font-size:0.7rem;color:#94a3b8;margin-top:6px;">1er · 2e · 3e lot</div>
+            </div>`;
+        });
+        container.innerHTML = html;
+    }
+
     async function loadResults() {
         const container = document.getElementById('resultsContainer');
+        const filterBar = document.getElementById('dayFilterBar');
+        container.innerHTML = '<div class="empty-msg"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>';
         try {
             const data = await apiFetch('/winners/results');
-            const results = data.results;
-            if (!results.length) { container.innerHTML = '<div class="empty-msg">Aucun résultat publié</div>'; return; }
-            container.innerHTML = results.map(r => `<div class="result-card"><div><strong>${r.name}</strong> <small>${new Date(r.date).toLocaleDateString()}</small></div><div style="font-family:monospace;">🎯 ${r.numbers[0]} - ${r.numbers[1]} - ${r.numbers[2]} | Lotto3: ${r.lotto3}</div></div>`).join('');
+            allResults = data.results || [];
+
+            if (!allResults.length) {
+                filterBar.innerHTML = '';
+                container.innerHTML = '<div class="empty-msg"><i class="fas fa-trophy" style="font-size:2rem;opacity:0.2;"></i><br>Aucun résultat publié</div>';
+                return;
+            }
+
+            // Construire les 7 derniers jours disponibles
+            const today = new Date();
+            const days = [];
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(today);
+                d.setDate(today.getDate() - i);
+                const key = d.toISOString().slice(0, 10);
+                const hasResults = allResults.some(r => getDayKey(r.date) === key);
+                if (hasResults || i === 0) {
+                    days.push({ key, label: getDayLabel(d.toISOString()), hasResults });
+                }
+            }
+
+            // Sélectionner aujourd'hui par défaut
+            if (!selectedDay) selectedDay = getDayKey(new Date().toISOString());
+
+            filterBar.innerHTML = days.map(d =>
+                `<div class="day-chip ${d.key === selectedDay ? 'active' : ''} ${!d.hasResults ? 'style="opacity:0.45;"' : ''}"
+                      data-day="${d.key}">${d.label}${d.hasResults ? '' : ' <small style="font-size:0.65rem;opacity:0.7;">vide</small>'}</div>`
+            ).join('');
+
+            document.querySelectorAll('.day-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    selectedDay = chip.dataset.day;
+                    document.querySelectorAll('.day-chip').forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    renderResults();
+                });
+            });
+
+            renderResults();
         } catch(e) {
             console.error(e);
-            container.innerHTML = '<div class="empty-msg">Erreur chargement des résultats</div>';
+            container.innerHTML = `<div class="empty-msg" style="color:#dc2626;"><i class="fas fa-exclamation-circle"></i><br>Erreur chargement résultats<br><small>${e.message}</small></div>`;
         }
     }
 

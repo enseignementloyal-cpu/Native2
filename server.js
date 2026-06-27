@@ -465,40 +465,56 @@ app.post('/api/player/tickets/save', authenticatePlayer, async (req, res) => {
 
 app.get('/api/player/tickets', authenticatePlayer, async (req, res) => {
     console.log('📋 Récupération des tickets pour joueur:', req.player.id);
+    function safeParseJSON(val, fallback) {
+        if (!val) return fallback;
+        if (typeof val === 'object') return val;
+        try { return JSON.parse(val); } catch(e) { return fallback; }
+    }
     try {
         const result = await pool.query(
-            `SELECT id, ticket_id, draw_name, total_amount, win_amount, win_details, checked, bets, date
+            `SELECT id, ticket_id, draw_name,
+                    total_amount::float AS total_amount,
+                    win_amount::float AS win_amount,
+                    win_details::text AS win_details,
+                    checked, bets::text AS bets, date
              FROM tickets WHERE player_id = $1 ORDER BY date DESC`,
             [req.player.id]
         );
         const tickets = result.rows.map(t => ({
-            ...t,
-            win_details: t.win_details
-                ? (typeof t.win_details === 'string' ? JSON.parse(t.win_details) : t.win_details)
-                : [],
-            bets: t.bets
-                ? (typeof t.bets === 'string' ? JSON.parse(t.bets) : t.bets)
-                : []
+            id: t.id,
+            ticket_id: t.ticket_id || ('TKT' + t.id),
+            draw_name: t.draw_name,
+            total_amount: t.total_amount || 0,
+            win_amount: t.win_amount || 0,
+            checked: t.checked,
+            date: t.date,
+            bets: safeParseJSON(t.bets, []),
+            win_details: safeParseJSON(t.win_details, [])
         }));
         console.log(`✅ ${tickets.length} ticket(s) trouvé(s)`);
         res.json({ tickets });
     } catch (err) {
-        console.error('❌ Erreur récupération tickets:', err);
-        res.status(500).json({ error: 'Erreur interne lors du chargement des tickets' });
+        console.error('❌ Erreur récupération tickets:', err.message, err.stack);
+        res.status(500).json({ error: 'Erreur interne: ' + err.message });
     }
 });
 app.get('/api/winners/results', authenticatePlayer, async (req, res) => {
     try {
         const results = await pool.query(
-            `SELECT w.id, w.draw_id, w.numbers, w.lotto3, w.date, d.name
+            `SELECT w.id, w.draw_id, w.numbers::text AS numbers, w.lotto3, w.date, d.name
              FROM winning_results w
              JOIN draws d ON w.draw_id = d.id
-             ORDER BY w.date DESC LIMIT 50`
+             WHERE w.date >= NOW() AT TIME ZONE 'America/Port-au-Prince' - INTERVAL '7 days'
+             ORDER BY w.date DESC`
         );
-        res.json({ results: results.rows });
+        const rows = results.rows.map(r => ({
+            ...r,
+            numbers: typeof r.numbers === 'string' ? JSON.parse(r.numbers) : r.numbers
+        }));
+        res.json({ results: rows });
     } catch (err) {
-        console.error('❌ Erreur résultats:', err);
-        res.status(500).json({ error: 'Erreur chargement résultats' });
+        console.error('❌ Erreur résultats:', err.message);
+        res.status(500).json({ error: 'Erreur chargement résultats: ' + err.message });
     }
 });
 app.post('/api/player/recharge/code', authenticatePlayer, async (req, res) => {
