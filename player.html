@@ -17,10 +17,14 @@
         .balance { background:rgba(255,255,255,0.2); backdrop-filter:blur(4px); padding:5px 16px; border-radius:40px; font-weight:600; font-size:1rem; }
         .logout-btn { background:rgba(239,68,68,0.2); border:1px solid #ef4444; color:#fecaca; padding:5px 14px; border-radius:40px; cursor:pointer; font-weight:500; transition:0.2s; }
         .logout-btn:hover { background:#ef4444; color:white; }
-        .carousel-container { background:#00000010; border-radius:20px; margin:15px 15px 0; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,0.1); }
-        .carousel-slides { display:flex; transition:transform 0.5s ease-in-out; }
-        .carousel-slide { min-width:100%; box-sizing:border-box; text-align:center; padding:15px; }
-        .carousel-slide img { max-height:120px; width:auto; max-width:90%; border-radius:16px; object-fit:contain; }
+        .carousel-container { background:#1e1b4b; border-radius:20px; margin:15px 15px 0; overflow:hidden; box-shadow:0 6px 20px rgba(0,0,0,0.2); position:relative; height:180px; }
+        .carousel-slides { display:flex; transition:transform 0.5s ease-in-out; height:100%; }
+        .carousel-slide { min-width:100%; box-sizing:border-box; text-align:center; padding:8px; display:flex; align-items:center; justify-content:center; height:100%; }
+        .carousel-slide img { height:160px; width:100%; border-radius:14px; object-fit:cover; }
+        .carousel-indicators { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); display:flex; gap:6px; z-index:5; }
+        .carousel-dot { width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,0.4); cursor:pointer; transition:0.3s; }
+        .carousel-dot.active { background:white; width:20px; border-radius:4px; }
+        .carousel-empty { height:160px; background:linear-gradient(135deg,#1e1b4b,#312e81); border-radius:20px; margin:15px 15px 0; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.35); font-size:0.85rem; }
         .carousel-text { background:#fef9c3; color:#854d0e; font-weight:bold; padding:10px; border-radius:30px; margin:0 15px 15px; text-align:center; font-size:0.9rem; box-shadow:0 2px 8px rgba(0,0,0,0.05); animation:pulse 2s infinite; }
         @keyframes pulse { 0% { opacity:0.8; transform:scale(1); } 50% { opacity:1; transform:scale(1.02); background:#fde047; } 100% { opacity:0.8; transform:scale(1); } }
         .tabs { display:flex; background:white; border-bottom:1px solid #e9edf2; position:sticky; top:84px; z-index:15; padding:0 12px; }
@@ -78,10 +82,11 @@
         <div id="slogan" style="font-size:0.75rem; margin-top:6px; opacity:0.8;"></div>
     </div>
 
-    <!-- Carrousel publicitaire -->
     <div class="carousel-container" id="carouselContainer" style="display: none;">
         <div class="carousel-slides" id="carouselSlides"></div>
+        <div class="carousel-indicators" id="carouselIndicators"></div>
     </div>
+    <div class="carousel-empty" id="carouselEmpty" style="display:none;"><i class="fas fa-image" style="margin-right:8px;"></i> Espace publicitaire</div>
     <div class="carousel-text" id="announcementText" style="display: none;"></div>
 
     <div class="tabs">
@@ -225,24 +230,40 @@
             const settings = await apiFetch('/player/settings');
             App.globalLimits = settings.globalLimits || {};
             App.blockedNumbers = settings.blockedNumbers || [];
+            // Mettre à jour le nom et slogan
             document.getElementById('lottery-name').innerText = settings.name || 'LOTATO';
             document.getElementById('slogan').innerText = settings.slogan || '';
-            // Carrousel
+            // Carrousel et annonces
             adsImages = settings.adsImages || [];
             const announcement = settings.announcements || "";
             const carouselDiv = document.getElementById('carouselContainer');
             const slidesDiv = document.getElementById('carouselSlides');
+            const indicatorsDiv = document.getElementById('carouselIndicators');
+            const emptyDiv = document.getElementById('carouselEmpty');
             const textDiv = document.getElementById('announcementText');
             if (adsImages.length > 0) {
                 carouselDiv.style.display = 'block';
+                emptyDiv.style.display = 'none';
                 slidesDiv.innerHTML = adsImages.map(url => `<div class="carousel-slide"><img src="${url}" alt="pub" onerror="this.style.display='none'"></div>`).join('');
+                // Créer les indicateurs
+                indicatorsDiv.innerHTML = adsImages.map((_, i) => `<div class="carousel-dot ${i===0?'active':''}" data-idx="${i}"></div>`).join('');
+                document.querySelectorAll('.carousel-dot').forEach(dot => {
+                    dot.addEventListener('click', () => {
+                        currentSlide = parseInt(dot.dataset.idx);
+                        slidesDiv.style.transform = `translateX(-${currentSlide * 100}%)`;
+                        document.querySelectorAll('.carousel-dot').forEach(d => d.classList.remove('active'));
+                        dot.classList.add('active');
+                    });
+                });
                 if (carouselInterval) clearInterval(carouselInterval);
                 carouselInterval = setInterval(() => {
                     currentSlide = (currentSlide + 1) % adsImages.length;
                     slidesDiv.style.transform = `translateX(-${currentSlide * 100}%)`;
+                    document.querySelectorAll('.carousel-dot').forEach((d, i) => d.classList.toggle('active', i === currentSlide));
                 }, 4000);
             } else {
                 carouselDiv.style.display = 'none';
+                emptyDiv.style.display = 'flex';
             }
             if (announcement && announcement.trim() !== "") {
                 textDiv.style.display = 'block';
@@ -253,7 +274,6 @@
         } catch(e) { console.error(e); }
     }
 
-    // ----- Gestion des paris -----
     function generateAutoBets(game, amount, nxDigit = null) {
         let bets = [];
         if (game === 'bo') {
@@ -393,19 +413,38 @@
 
     async function loadHistory() {
         const container = document.getElementById('historyContainer');
+        container.innerHTML = '<div class="empty-msg"><i class="fas fa-spinner fa-spin"></i> Chargement des tickets...</div>';
         try {
             const data = await apiFetch('/player/tickets');
             const tickets = data.tickets;
-            if (!tickets || !tickets.length) { container.innerHTML = '<div class="empty-msg">Aucun ticket pour le moment</div>'; return; }
+            if (!tickets || !tickets.length) {
+                container.innerHTML = '<div class="empty-msg"><i class="fas fa-ticket-alt"></i><br>Aucun ticket pour le moment</div>';
+                return;
+            }
             container.innerHTML = tickets.map(t => {
-                const win = t.win_amount || 0;
-                let status = !t.checked ? '<span class="badge badge-wait">En attente</span>' : (win > 0 ? `<span class="badge badge-win">Gagné ${win} G</span>` : '<span class="badge badge-loss">Perdu</span>');
-                const preview = (t.bets || []).slice(0,2).map(b => `${b.game} ${b.number}`).join(', ');
-                return `<div class="history-card"><div><strong>${t.draw_name}</strong> ${status}</div><div style="font-size:0.75rem;">📅 ${new Date(t.date).toLocaleString()}</div><div>🎲 ${preview} | Total: ${t.total_amount} G</div>${win>0?`<div style="color:#10b981;">💰 Gain: ${win} G</div>`:''}</div>`;
+                const win = parseFloat(t.win_amount) || 0;
+                let statusBadge = !t.checked
+                    ? '<span class="badge badge-wait">⏳ En attente</span>'
+                    : (win > 0
+                        ? `<span class="badge badge-win">🏆 Gagné ${win.toLocaleString()} G</span>`
+                        : '<span class="badge badge-loss">❌ Perdu</span>');
+                const betsArray = Array.isArray(t.bets) ? t.bets : [];
+                const preview = betsArray.slice(0, 3).map(b => `<span style="background:#eef2ff;padding:2px 8px;border-radius:20px;font-size:0.7rem;">${b.game} <strong>${b.number || b.cleanNumber}</strong></span>`).join(' ');
+                const moreCount = betsArray.length > 3 ? `<span style="font-size:0.7rem;color:#6c7a91;">+${betsArray.length - 3} autres</span>` : '';
+                return `<div class="history-card">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+                        <strong>${t.draw_name}</strong> ${statusBadge}
+                    </div>
+                    <div style="font-size:0.72rem;color:#6c7a91;margin:4px 0;">
+                        🎫 Ticket #${t.ticket_id || t.id} &nbsp;·&nbsp; 📅 ${new Date(t.date).toLocaleString()}
+                    </div>
+                    <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">${preview}${moreCount}</div>
+                    <div style="margin-top:6px;font-weight:700;">💰 Mise : ${parseFloat(t.total_amount).toLocaleString()} G ${win > 0 ? `<span style="color:#10b981;">→ Gain : ${win.toLocaleString()} G</span>` : ''}</div>
+                </div>`;
             }).join('');
         } catch(e) {
             console.error(e);
-            container.innerHTML = '<div class="empty-msg">Erreur chargement des tickets</div>';
+            container.innerHTML = '<div class="empty-msg" style="color:#dc2626;"><i class="fas fa-exclamation-circle"></i><br>Erreur lors du chargement des tickets.<br><small>' + e.message + '</small></div>';
         }
     }
 
@@ -544,7 +583,6 @@
 
     function logout() { localStorage.clear(); window.location.href = 'index.html'; }
 
-    // --- Event listeners ---
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', () => {
             const target = tab.dataset.tab;
@@ -564,8 +602,9 @@
     document.getElementById('rechargeBtn').addEventListener('click', rechargeWithCode);
     document.getElementById('logoutBtn').addEventListener('click', logout);
 
-    // --- Initialisation ---
     (async function init() {
+        // Afficher le placeholder carrousel dès le départ
+        document.getElementById('carouselEmpty').style.display = 'flex';
         await refreshProfile();
         await loadDraws();
         await loadSettingsAndLimits();
