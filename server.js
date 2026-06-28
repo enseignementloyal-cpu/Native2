@@ -274,9 +274,31 @@ app.get('/api/owner/settings', authenticateOwner, async (req, res) => {
     } else res.json({});
 });
 app.post('/api/owner/settings', authenticateOwner, async (req, res) => {
-    const { name, slogan, logoUrl, multipliers, adsImages, announcements, advancedSettings } = req.body;
-    await pool.query(`UPDATE lottery_settings SET name=$1, slogan=$2, logo_url=$3, multipliers=$4, ads_images=$5, announcements=$6, advanced_settings=$7 WHERE id=1`, [name, slogan, logoUrl, multipliers, adsImages, announcements, advancedSettings]);
-    res.json({ success: true });
+    try {
+        const { name, slogan, logoUrl, multipliers, adsImages, announcements, advancedSettings } = req.body;
+        // Récupérer les valeurs actuelles pour ne pas écraser avec null/undefined
+        const current = await pool.query('SELECT * FROM lottery_settings LIMIT 1');
+        const cur = current.rows[0] || {};
+        await pool.query(
+            `UPDATE lottery_settings SET
+                name=$1, slogan=$2, logo_url=$3, multipliers=$4,
+                ads_images=$5, announcements=$6, advanced_settings=$7
+             WHERE id=1`,
+            [
+                name        ?? cur.name,
+                slogan      ?? cur.slogan      ?? '',
+                logoUrl     ?? cur.logo_url    ?? '',
+                multipliers ? JSON.stringify(multipliers) : cur.multipliers,
+                adsImages   !== undefined ? JSON.stringify(adsImages) : cur.ads_images,
+                announcements !== undefined ? announcements : (cur.announcements ?? ''),
+                advancedSettings !== undefined ? JSON.stringify(advancedSettings) : cur.advanced_settings
+            ]
+        );
+        res.json({ success: true });
+    } catch(err) {
+        console.error('❌ Erreur save settings:', err.message);
+        res.status(500).json({ error: err.message });
+    }
 });
 app.post('/api/owner/generate-recharge-code', authenticateOwner, async (req, res) => {
     const { amount } = req.body;
@@ -304,9 +326,27 @@ app.get('/api/owner/players', authenticateOwner, async (req, res) => {
     res.json(result.rows);
 });
 app.get('/api/owner/tickets', authenticateOwner, async (req, res) => {
-    const result = await pool.query(`SELECT t.id, t.ticket_id, t.draw_name, t.total_amount, t.win_amount, t.checked, t.date, p.name as player_name, p.phone 
-        FROM tickets t LEFT JOIN players p ON t.player_id = p.id ORDER BY t.date DESC`);
-    res.json(result.rows);
+    try {
+        const colCheck = await pool.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'tickets'`);
+        const cols = colCheck.rows.map(r => r.column_name);
+        const hasTicketId = cols.includes('ticket_id');
+        const ticketIdSel = hasTicketId ? 't.ticket_id' : "CONCAT('TKT', t.id) AS ticket_id";
+        const result = await pool.query(`
+            SELECT t.id, ${ticketIdSel}, t.draw_name,
+                   t.total_amount::float AS total_amount,
+                   t.win_amount::float AS win_amount,
+                   t.checked, t.date,
+                   p.name AS player_name, p.phone
+            FROM tickets t
+            LEFT JOIN players p ON t.player_id = p.id
+            ORDER BY t.date DESC
+            LIMIT 500
+        `);
+        res.json(result.rows);
+    } catch(err) {
+        console.error('❌ Erreur owner tickets:', err.message);
+        res.status(500).json({ error: err.message });
+    }
 });
 app.delete('/api/owner/tickets/:id', authenticateOwner, async (req, res) => {
     await pool.query('DELETE FROM tickets WHERE id = $1', [req.params.id]);

@@ -248,22 +248,20 @@
         lot2 = lot2.padStart(2,'0');
         lot3 = lot3.padStart(2,'0');
         lotto3 = lotto3.padStart(3,'0');
+        const numbers = [lot1, lot2, lot3];
         try {
-            const res = await fetchAPI('/owner/publish-results', {
-                method: 'POST',
-                body: JSON.stringify({ drawId, numbers: [lot1, lot2, lot3], lotto3 })
-            });
+            const res = await fetchAPI('/owner/publish-results', { method: 'POST', body: JSON.stringify({ drawId, numbers, lotto3 }) });
             if (res.success) {
-                document.getElementById('publish-message').innerHTML = '<span style="color:green;">✅ Résultats publiés</span>';
+                document.getElementById('publish-message').innerHTML = '<span style="color:green;">✅ Résultats publiés et gains calculés !</span>';
                 document.getElementById('lot1').value = '';
                 document.getElementById('lot2').value = '';
                 document.getElementById('lot3').value = '';
                 document.getElementById('lotto3-result').value = '';
             } else {
-                document.getElementById('publish-message').innerHTML = `<span style="color:red;">❌ Erreur: ${res.error}</span>`;
+                document.getElementById('publish-message').innerHTML = '<span style="color:red;">❌ Erreur : ' + (res.error || '') + '</span>';
             }
-        } catch (e) {
-            document.getElementById('publish-message').innerHTML = `<span style="color:red;">Erreur: ${e.message}</span>`;
+        } catch(e) {
+            document.getElementById('publish-message').innerHTML = '<span style="color:red;">Erreur lors de la publication</span>';
         }
     }
 
@@ -325,8 +323,12 @@
         } else alert('Erreur génération');
     }
 
+    // Cache local des settings pour éviter les écrasements
+    let _cachedSettings = {};
+
     async function loadSettings() {
         const settings = await fetchAPI('/owner/settings');
+        _cachedSettings = settings;
         document.getElementById('setting-name').value = settings.name || 'LOTATO PRO';
         document.getElementById('setting-slogan').value = settings.slogan || '';
         document.getElementById('setting-logo').value = settings.logoUrl || '';
@@ -340,36 +342,53 @@
         document.getElementById('mult-mariage').value = mult.mariage || 500;
     }
 
+    function buildSettingsPayload(overrides = {}) {
+        // Toujours inclure TOUS les champs pour ne jamais écraser les autres
+        const mult = _cachedSettings.multipliers || {};
+        return {
+            name: document.getElementById('setting-name').value || _cachedSettings.name || 'LOTATO',
+            slogan: document.getElementById('setting-slogan').value || _cachedSettings.slogan || '',
+            logoUrl: document.getElementById('setting-logo').value || _cachedSettings.logoUrl || '',
+            multipliers: {
+                lot1:    parseInt(document.getElementById('mult-lot1').value)    || mult.lot1    || 90,
+                lot2:    parseInt(document.getElementById('mult-lot2').value)    || mult.lot2    || 50,
+                lot3:    parseInt(document.getElementById('mult-lot3').value)    || mult.lot3    || 30,
+                lotto3:  parseInt(document.getElementById('mult-lotto3').value)  || mult.lotto3  || 500,
+                lotto4:  parseInt(document.getElementById('mult-lotto4').value)  || mult.lotto4  || 5000,
+                lotto5:  parseInt(document.getElementById('mult-lotto5').value)  || mult.lotto5  || 25000,
+                mariage: parseInt(document.getElementById('mult-mariage').value) || mult.mariage || 500
+            },
+            adsImages:       _cachedSettings.adsImages       || [],
+            announcements:   _cachedSettings.announcements   || '',
+            advancedSettings: _cachedSettings.advancedSettings || null,
+            ...overrides
+        };
+    }
+
     async function saveSettings() {
-        const multipliers = {
-            lot1: parseInt(document.getElementById('mult-lot1').value),
-            lot2: parseInt(document.getElementById('mult-lot2').value),
-            lot3: parseInt(document.getElementById('mult-lot3').value),
-            lotto3: parseInt(document.getElementById('mult-lotto3').value),
-            lotto4: parseInt(document.getElementById('mult-lotto4').value),
-            lotto5: parseInt(document.getElementById('mult-lotto5').value),
-            mariage: parseInt(document.getElementById('mult-mariage').value)
-        };
-        const data = {
-            name: document.getElementById('setting-name').value,
-            slogan: document.getElementById('setting-slogan').value,
-            logoUrl: document.getElementById('setting-logo').value,
-            multipliers
-        };
-        const res = await fetchAPI('/owner/settings', { method: 'POST', body: JSON.stringify(data) });
-        if (res.success) document.getElementById('settings-message').innerHTML = '<span style="color:green;">✅ Enregistré</span>';
-        else document.getElementById('settings-message').innerHTML = '<span style="color:red;">❌ Erreur</span>';
+        try {
+            const payload = buildSettingsPayload();
+            const res = await fetchAPI('/owner/settings', { method: 'POST', body: JSON.stringify(payload) });
+            _cachedSettings = { ..._cachedSettings, ...payload };
+            document.getElementById('settings-message').innerHTML = res.success
+                ? '<span style="color:#4ade80;">✅ Enregistré</span>'
+                : '<span style="color:red;">❌ Erreur</span>';
+        } catch(e) {
+            document.getElementById('settings-message').innerHTML = '<span style="color:red;">❌ ' + e.message + '</span>';
+        }
     }
 
     async function loadAdsSettings() {
         const settings = await fetchAPI('/owner/settings');
+        _cachedSettings = { ..._cachedSettings, ...settings };
         const adsImages = settings.adsImages || [];
         const container = document.getElementById('ads-images-list');
-        if (adsImages.length === 0) container.innerHTML = '<p>Aucune image publicitaire</p>';
-        else {
+        if (adsImages.length === 0) {
+            container.innerHTML = '<p style="color:#aaa;">Aucune image publicitaire</p>';
+        } else {
             container.innerHTML = adsImages.map((url, idx) => `
                 <div style="position:relative; display:inline-block;">
-                    <img src="${url}" style="max-height:80px; margin:5px;">
+                    <img src="${url}" style="max-height:80px; margin:5px; border-radius:8px;" onerror="this.style.opacity=0.3">
                     <button class="remove-img" onclick="removeAdImage(${idx})">✕</button>
                 </div>
             `).join('');
@@ -378,44 +397,68 @@
     }
 
     async function addAdImage() {
-        const url = document.getElementById('new-ad-image').value;
+        const url = document.getElementById('new-ad-image').value.trim();
         if (!url) { alert('URL de l\'image requise'); return; }
-        const settings = await fetchAPI('/owner/settings');
-        let adsImages = settings.adsImages || [];
-        adsImages.push(url);
-        const res = await fetchAPI('/owner/settings', { method: 'POST', body: JSON.stringify({ ...settings, adsImages }) });
-        if (res.success) { loadAdsSettings(); document.getElementById('new-ad-image').value = ''; }
-        else alert('Erreur');
+        if (!url.startsWith('http')) { alert('URL invalide (doit commencer par http)'); return; }
+        // Recharger les settings frais avant de modifier
+        const fresh = await fetchAPI('/owner/settings');
+        _cachedSettings = { ..._cachedSettings, ...fresh };
+        const adsImages = [...(fresh.adsImages || []), url];
+        const payload = buildSettingsPayload({ adsImages });
+        const res = await fetchAPI('/owner/settings', { method: 'POST', body: JSON.stringify(payload) });
+        if (res.success) {
+            _cachedSettings.adsImages = adsImages;
+            document.getElementById('ads-message').innerHTML = '<span style="color:#4ade80;">✅ Image ajoutée</span>';
+            document.getElementById('new-ad-image').value = '';
+            loadAdsSettings();
+        } else {
+            document.getElementById('ads-message').innerHTML = '<span style="color:red;">❌ Erreur sauvegarde</span>';
+        }
     }
 
     async function removeAdImage(index) {
-        const settings = await fetchAPI('/owner/settings');
-        let adsImages = settings.adsImages || [];
-        adsImages.splice(index, 1);
-        const res = await fetchAPI('/owner/settings', { method: 'POST', body: JSON.stringify({ ...settings, adsImages }) });
-        if (res.success) loadAdsSettings();
+        if (!confirm('Supprimer cette image ?')) return;
+        const fresh = await fetchAPI('/owner/settings');
+        _cachedSettings = { ..._cachedSettings, ...fresh };
+        const adsImages = (fresh.adsImages || []).filter((_, i) => i !== index);
+        const payload = buildSettingsPayload({ adsImages });
+        const res = await fetchAPI('/owner/settings', { method: 'POST', body: JSON.stringify(payload) });
+        if (res.success) { _cachedSettings.adsImages = adsImages; loadAdsSettings(); }
     }
 
     async function saveAnnouncement() {
         const announcement = document.getElementById('announcement-text').value;
-        const settings = await fetchAPI('/owner/settings');
-        const res = await fetchAPI('/owner/settings', { method: 'POST', body: JSON.stringify({ ...settings, announcements: announcement }) });
-        if (res.success) document.getElementById('ads-message').innerHTML = '<span style="color:green;">✅ Annonce enregistrée</span>';
-        else document.getElementById('ads-message').innerHTML = '<span style="color:red;">❌ Erreur</span>';
+        const payload = buildSettingsPayload({ announcements: announcement });
+        const res = await fetchAPI('/owner/settings', { method: 'POST', body: JSON.stringify(payload) });
+        if (res.success) {
+            _cachedSettings.announcements = announcement;
+            document.getElementById('ads-message').innerHTML = '<span style="color:#4ade80;">✅ Annonce enregistrée</span>';
+        } else {
+            document.getElementById('ads-message').innerHTML = '<span style="color:red;">❌ Erreur</span>';
+        }
     }
 
+    // Nouvelles fonctions
     async function loadTickets() {
-        const tickets = await fetchAPI('/owner/tickets');
         const container = document.getElementById('tickets-list');
-        if (!tickets.length) { container.innerHTML = '<p>Aucun ticket</p>'; return; }
-        container.innerHTML = tickets.map(t => `
-            <div class="item-row">
-                <div><strong>${t.ticket_id}</strong> - ${t.player_name || 'Inconnu'} (${t.phone || '-'})<br>
-                Tirage: ${t.draw_name} | Mise: ${t.total_amount} G | Gain: ${t.win_amount} G | ${t.checked ? 'Vérifié' : 'En attente'}<br>
-                Date: ${new Date(t.date).toLocaleString()}</div>
-                <button class="btn-danger" onclick="deleteTicket(${t.id})">Supprimer</button>
-            </div>
-        `).join('');
+        container.innerHTML = '<p style="color:#aaa;">Chargement...</p>';
+        try {
+            const tickets = await fetchAPI('/owner/tickets');
+            if (!tickets.length) { container.innerHTML = '<p style="color:#aaa;">Aucun ticket</p>'; return; }
+            container.innerHTML = tickets.map(t => `
+                <div class="item-row">
+                    <div>
+                        <strong>${t.ticket_id || ('TKT' + t.id)}</strong> — ${t.player_name || 'Inconnu'} (${t.phone || '-'})<br>
+                        <span style="color:#a0a0b8;">Tirage: ${t.draw_name} | Mise: ${parseFloat(t.total_amount||0).toLocaleString()} G | Gain: ${parseFloat(t.win_amount||0).toLocaleString()} G</span><br>
+                        <span style="font-size:0.8rem; color:${t.checked ? '#4ade80' : '#fbbf24'};">${t.checked ? '✅ Vérifié' : '⏳ En attente'}</span>
+                        <span style="font-size:0.8rem; color:#6c7a91;"> · ${new Date(t.date).toLocaleString()}</span>
+                    </div>
+                    <button class="btn-danger" onclick="deleteTicket(${t.id})">Supprimer</button>
+                </div>
+            `).join('');
+        } catch(e) {
+            container.innerHTML = `<p style="color:#ff4d4d;">❌ Erreur: ${e.message}</p>`;
+        }
     }
 
     async function deleteTicket(id) {
@@ -435,6 +478,7 @@
         `).join('');
     }
 
+    // Gestion des rapports
     document.getElementById('report-period').addEventListener('change', function() {
         document.getElementById('custom-dates').style.display = this.value === 'custom' ? 'block' : 'none';
     });
@@ -444,8 +488,10 @@
         let startDate = null, endDate = null;
         const today = new Date();
         if (period === 'day') {
-            const start = new Date(today); start.setHours(0,0,0,0);
-            const end = new Date(today); end.setHours(23,59,59,999);
+            const start = new Date(today);
+            start.setHours(0,0,0,0);
+            const end = new Date(today);
+            end.setHours(23,59,59,999);
             startDate = start.toISOString();
             endDate = end.toISOString();
         } else if (period === 'week') {
@@ -475,8 +521,8 @@
             document.getElementById('report-total-wins').innerText = data.totalWins.toLocaleString();
             document.getElementById('report-total-deposits').innerText = data.totalDeposits.toLocaleString();
             document.getElementById('report-net-profit').innerText = data.netProfit.toLocaleString();
-        } catch (e) {
-            alert('Erreur rapport: ' + e.message);
+        } catch(e) {
+            alert('Erreur chargement rapport: ' + e.message);
         }
     }
 
