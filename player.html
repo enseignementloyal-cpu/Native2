@@ -110,19 +110,46 @@
 
     <div id="playScreen" class="screen active">
         <div class="card">
+            <!-- Menu déroulant tirage -->
             <div style="font-weight:700; margin-bottom:10px;"><i class="fas fa-calendar-alt"></i> Tirage actif</div>
-            <div class="draws-scroll" id="drawsList"></div>
+            <div style="position:relative;">
+                <select id="drawsSelect" style="width:100%;padding:12px 16px;border-radius:40px;border:1.5px solid #e2e8f0;font-size:0.95rem;font-weight:600;background:#f8faff;color:#1e293b;appearance:none;cursor:pointer;outline:none;">
+                    <option value="">— Choisir un tirage —</option>
+                </select>
+                <i class="fas fa-chevron-down" style="position:absolute;right:18px;top:50%;transform:translateY(-50%);pointer-events:none;color:#6c7a91;"></i>
+            </div>
             <div id="drawsError" class="error-msg" style="display:none;"></div>
         </div>
         <div class="card">
-            <div style="font-weight:700; margin-bottom:14px;"><i class="fas fa-dice"></i> Choisissez votre jeu</div>
-            <div class="game-category"><div class="category-title">🎯 Borlette</div><div class="sub-buttons"><button class="game-btn" data-game="borlette">Borlette</button></div></div>
-            <div class="game-category"><div class="category-title">🎲 Lotto</div><div class="sub-buttons"><button class="sub-btn" data-game="lotto3">Lotto3</button><button class="sub-btn" data-game="lotto4">Lotto4</button><button class="sub-btn" data-game="lotto5">Lotto5</button><button class="sub-btn auto-chip" data-game="auto_lotto4">Auto Lotto4</button><button class="sub-btn auto-chip" data-game="auto_lotto5">Auto Lotto5</button></div></div>
-            <div class="game-category"><div class="category-title">💍 Mariage</div><div class="sub-buttons"><button class="sub-btn" data-game="mariage">Mariage</button><button class="sub-btn auto-chip" data-game="auto_marriage">Auto Mariage</button></div></div>
-            <div class="game-category"><div class="category-title">✨ Spéciaux</div><div class="sub-buttons"><button class="sub-btn" data-game="bo">BO</button><button class="sub-btn" data-game="grap">GRAP</button><button class="sub-btn" data-game="nx">Nx</button></div></div>
-            <div id="optionsPanel" class="options-panel"></div>
-            <div id="nxPanel" class="nx-panel" style="display:none;"></div>
-            <div class="bet-row">
+            <!-- Menu déroulant jeu -->
+            <div style="font-weight:700; margin-bottom:10px;"><i class="fas fa-dice"></i> Type de jeu</div>
+            <div style="position:relative;">
+                <select id="gameSelect" style="width:100%;padding:12px 16px;border-radius:40px;border:1.5px solid #e2e8f0;font-size:0.95rem;font-weight:600;background:#f8faff;color:#1e293b;appearance:none;cursor:pointer;outline:none;">
+                    <optgroup label="🎯 Borlette">
+                        <option value="borlette">Borlette</option>
+                    </optgroup>
+                    <optgroup label="🎲 Lotto">
+                        <option value="lotto3">Lotto 3</option>
+                        <option value="lotto4">Lotto 4</option>
+                        <option value="lotto5">Lotto 5</option>
+                        <option value="auto_lotto4">Auto Lotto 4</option>
+                        <option value="auto_lotto5">Auto Lotto 5</option>
+                    </optgroup>
+                    <optgroup label="💍 Mariage">
+                        <option value="mariage">Mariage</option>
+                        <option value="auto_marriage">Auto Mariage</option>
+                    </optgroup>
+                    <optgroup label="✨ Spéciaux">
+                        <option value="bo">BO</option>
+                        <option value="grap">GRAP</option>
+                        <option value="nx">Nx</option>
+                    </optgroup>
+                </select>
+                <i class="fas fa-chevron-down" style="position:absolute;right:18px;top:50%;transform:translateY(-50%);pointer-events:none;color:#6c7a91;"></i>
+            </div>
+            <div id="optionsPanel" class="options-panel" style="margin-top:10px;"></div>
+            <div id="nxPanel" class="nx-panel" style="display:none;margin-top:10px;"></div>
+            <div class="bet-row" style="margin-top:12px;">
                 <input type="text" id="betNumber" placeholder="Numéro" autocomplete="off">
                 <input type="number" id="betAmount" placeholder="Montant G" autocomplete="off">
                 <button class="btn-add-icon" id="addBtn">+</button>
@@ -201,38 +228,43 @@
         try {
             const data = await apiFetch('/draws');
             App.draws = data.draws;
-            const container = document.getElementById('drawsList');
+            const select   = document.getElementById('drawsSelect');
             const errorDiv = document.getElementById('drawsError');
             if (!App.draws.length) {
-                container.innerHTML = '';
                 errorDiv.style.display = 'block';
                 errorDiv.innerText = 'Aucun tirage disponible';
                 return;
             }
             errorDiv.style.display = 'none';
-            container.innerHTML = App.draws.map(d => `
-                <div class="draw-chip ${App.selectedDrawId === d.id ? 'active' : ''} ${!d.active ? 'disabled' : ''}" 
-                     data-id="${d.id}" data-name="${d.name}" data-active="${d.active}">
-                    ${d.name} (${d.time.substring(0,5)}) ${!d.active ? '🔒' : ''}
-                </div>
-            `).join('');
-            document.querySelectorAll('.draw-chip').forEach(el => {
-                el.addEventListener('click', () => {
-                    const active = el.dataset.active === 'true';
-                    if (!active) { alert("Tirage fermé (7 minutes avant l'heure)"); return; }
-                    App.selectedDrawId = parseInt(el.dataset.id);
-                    App.selectedDrawName = el.dataset.name;
-                    loadDraws();
-                });
-            });
-            if (!App.selectedDrawId && App.draws.length) {
+            // Peupler le select
+            select.innerHTML = '<option value="">— Choisir un tirage —</option>' +
+                App.draws.map(d => `
+                    <option value="${d.id}" data-name="${d.name}" ${!d.active ? 'disabled' : ''}>
+                        ${d.name} (${d.time.substring(0,5)}) ${!d.active ? '🔒' : ''}
+                    </option>
+                `).join('');
+            // Auto-sélectionner le premier tirage actif
+            if (!App.selectedDrawId) {
                 const firstActive = App.draws.find(d => d.active);
                 if (firstActive) {
-                    App.selectedDrawId = firstActive.id;
+                    App.selectedDrawId   = firstActive.id;
                     App.selectedDrawName = firstActive.name;
-                    loadDraws();
+                    select.value = firstActive.id;
                 }
+            } else {
+                select.value = App.selectedDrawId;
             }
+            select.onchange = () => {
+                const chosen = App.draws.find(d => d.id === parseInt(select.value));
+                if (!chosen) { App.selectedDrawId = null; App.selectedDrawName = ''; return; }
+                if (!chosen.active) {
+                    alert("Tirage fermé (7 minutes avant l'heure)");
+                    select.value = App.selectedDrawId || '';
+                    return;
+                }
+                App.selectedDrawId   = chosen.id;
+                App.selectedDrawName = chosen.name;
+            };
         } catch(e) {
             console.error(e);
             document.getElementById('drawsError').innerText = 'Erreur chargement tirages';
@@ -576,46 +608,37 @@
     }
 
     function initGameSelectors() {
-        document.querySelectorAll('.game-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                App.selectedGame = btn.dataset.game;
-                document.querySelectorAll('.game-btn').forEach(b=>b.classList.remove('active'));
-                btn.classList.add('active');
-                updateOptionsAndInput();
-            });
-        });
-        document.querySelectorAll('.sub-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const game = btn.dataset.game;
-                if (game === 'nx') {
-                    const panel = document.getElementById('nxPanel');
-                    if (panel.style.display === 'flex') { panel.style.display = 'none'; return; }
-                    panel.innerHTML = '';
-                    for (let d=0; d<=9; d++) {
-                        const digitDiv = document.createElement('div');
-                        digitDiv.className = 'nx-digit';
-                        digitDiv.innerText = d;
-                        digitDiv.onclick = () => {
-                            pendingNxDigit = d;
-                            App.selectedGame = `n${d}`;
-                            panel.style.display = 'none';
-                            alert(`Jeu N${d} sélectionné : tous les numéros se terminant par ${d}`);
-                        };
-                        panel.appendChild(digitDiv);
-                    }
-                    panel.style.display = 'flex';
-                    return;
-                }
-                App.selectedGame = game;
-                document.querySelectorAll('.sub-btn').forEach(b=>b.classList.remove('active'));
-                btn.classList.add('active');
-                document.querySelectorAll('.game-btn').forEach(b=>b.classList.remove('active'));
-                updateOptionsAndInput();
-            });
-        });
-        document.querySelector('.game-btn').classList.add('active');
-        App.selectedGame = 'borlette';
+        const gameSelect = document.getElementById('gameSelect');
+        // Initialiser avec borlette
+        App.selectedGame = gameSelect.value || 'borlette';
         updateOptionsAndInput();
+
+        gameSelect.addEventListener('change', () => {
+            const game = gameSelect.value;
+            if (game === 'nx') {
+                // Afficher le panel Nx pour choisir le chiffre
+                const panel = document.getElementById('nxPanel');
+                panel.innerHTML = '';
+                for (let d = 0; d <= 9; d++) {
+                    const digitDiv = document.createElement('div');
+                    digitDiv.className = 'nx-digit';
+                    digitDiv.innerText = d;
+                    digitDiv.onclick = () => {
+                        pendingNxDigit = d;
+                        App.selectedGame = `n${d}`;
+                        panel.style.display = 'none';
+                        updateOptionsAndInput();
+                        alert(`Jeu N${d} sélectionné : tous les numéros se terminant par ${d}`);
+                    };
+                    panel.appendChild(digitDiv);
+                }
+                panel.style.display = 'flex';
+                return;
+            }
+            App.selectedGame = game;
+            document.getElementById('nxPanel').style.display = 'none';
+            updateOptionsAndInput();
+        });
     }
 
     function updateOptionsAndInput() {
