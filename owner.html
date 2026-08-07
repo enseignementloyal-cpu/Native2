@@ -34,6 +34,11 @@
         .remove-img { background:#ff4d4d; border:none; color:white; border-radius:20px; padding:2px 8px; margin-left:5px; cursor:pointer; }
         .report-result { background:rgba(0,0,0,0.2); padding:15px; border-radius:16px; margin-top:20px; }
         .report-line { margin:10px 0; font-size:1.1rem; }
+        .tday-chip { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:30px; padding:8px 18px; font-size:0.82rem; font-weight:600; white-space:nowrap; cursor:pointer; transition:0.2s; color:#a0a0b8; }
+        .tday-chip:hover { background:rgba(255,255,255,0.1); color:white; }
+        .tday-chip.active { background:linear-gradient(135deg,#ad00f1,#00d4ff); color:white; border-color:transparent; }
+        .tday-chip.old { background:rgba(255,193,7,0.1); border-color:rgba(255,193,7,0.3); color:#fbbf24; }
+        .tday-chip.old.active { background:linear-gradient(135deg,#f59e0b,#ef4444); border-color:transparent; color:white; }
     </style>
 </head>
 <body>
@@ -149,13 +154,21 @@
 
     <!-- Tickets list -->
     <div id="tickets-tab" class="tab-content">
-        <h3>Tous les tickets</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+            <h3 style="margin:0;">🎫 Tickets</h3>
+            <div id="tickets-stats" style="font-size:0.85rem; color:#a0a0b8;"></div>
+        </div>
+        <div id="tickets-day-bar" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;"></div>
         <div id="tickets-list" class="list-container"></div>
     </div>
 
     <!-- Joueurs list -->
     <div id="players-tab" class="tab-content">
-        <h3>Tous les joueurs</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+            <h3 style="margin:0;">👥 Joueurs</h3>
+            <div id="players-stats" style="font-size:0.85rem; color:#a0a0b8;"></div>
+        </div>
+        <div id="players-day-bar" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;"></div>
         <div id="players-list" class="list-container"></div>
     </div>
 
@@ -196,13 +209,24 @@
     if (!token) window.location.href = 'index.html';
 
     async function fetchAPI(url, options = {}) {
-        const res = await fetch(`${API_BASE}${url}`, {
-            ...options,
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', ...options.headers }
-        });
+        let res;
+        try {
+            res = await fetch(`${API_BASE}${url}`, {
+                ...options,
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', ...options.headers }
+            });
+        } catch(networkErr) {
+            throw new Error('Impossible de joindre le serveur. Vérifie ta connexion.');
+        }
         if (res.status === 401) { localStorage.removeItem('auth_token'); window.location.href = 'index.html'; throw new Error('Non authentifié'); }
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+            const text = await res.text();
+            console.error(`Réponse non-JSON [${res.status}] pour ${url}:`, text.slice(0, 200));
+            throw new Error(`Erreur serveur (${res.status}) — réponse inattendue`);
+        }
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+        if (!res.ok) throw new Error(data.error || `Erreur serveur (${res.status})`);
         return data;
     }
 
@@ -439,23 +463,129 @@
     }
 
     // Nouvelles fonctions
+    let _allTickets = [];
+    let _ticketDay = null; // 'YYYY-MM-DD' ou 'old'
+
+    function ticketDayKey(dateStr) {
+        // Groupe par jour Haiti UTC-5
+        const d = new Date(new Date(dateStr).getTime() - 5 * 3600 * 1000);
+        return d.toISOString().slice(0, 10);
+    }
+
+    function ticketDayLabel(key) {
+        const today = new Date();
+        const todayKey = ticketDayKey(today.toISOString());
+        const yest = new Date(today); yest.setDate(today.getDate() - 1);
+        const yesterdayKey = ticketDayKey(yest.toISOString());
+        if (key === todayKey) return "Aujourd'hui";
+        if (key === yesterdayKey) return 'Hier';
+        const d = new Date(key + 'T12:00:00');
+        return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+    }
+
+    function renderTickets() {
+        const container = document.getElementById('tickets-list');
+        const statsEl   = document.getElementById('tickets-stats');
+        let filtered;
+        if (_ticketDay === 'old') {
+            // Tickets plus vieux que 7 jours
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - 7);
+            filtered = _allTickets.filter(t => new Date(t.date) < cutoff);
+        } else {
+            filtered = _allTickets.filter(t => ticketDayKey(t.date) === _ticketDay);
+        }
+
+        const total     = filtered.reduce((s, t) => s + (t.total_amount || 0), 0);
+        const gains     = filtered.reduce((s, t) => s + (t.win_amount  || 0), 0);
+        const nbWait    = filtered.filter(t => !t.checked).length;
+        statsEl.innerHTML = `<span style="color:#c4b5fd;">${filtered.length} ticket(s)</span> · Mises: <span style="color:#4ade80;">${total.toLocaleString()} G</span> · Gains: <span style="color:#f87171;">${gains.toLocaleString()} G</span> · En attente: <span style="color:#fbbf24;">${nbWait}</span>`;
+
+        if (!filtered.length) {
+            container.innerHTML = '<p style="color:#aaa; padding:10px;">Aucun ticket pour cette période</p>';
+            return;
+        }
+        container.innerHTML = filtered.map(t => `
+            <div class="item-row">
+                <div>
+                    <strong style="color:#c4b5fd;">${t.ticket_id || ('TKT' + t.id)}</strong>
+                    <span style="color:#fff;"> — ${t.player_name || 'Inconnu'}</span>
+                    <span style="color:#6c7a91;"> (${t.phone || '-'})</span><br>
+                    <span style="color:#a0a0b8; font-size:0.85rem;">
+                        📋 ${t.draw_name} &nbsp;|&nbsp;
+                        Mise: <strong style="color:#4ade80;">${parseFloat(t.total_amount||0).toLocaleString()} G</strong> &nbsp;|&nbsp;
+                        Gain: <strong style="color:${t.win_amount > 0 ? '#f87171' : '#6c7a91'};">${parseFloat(t.win_amount||0).toLocaleString()} G</strong>
+                    </span><br>
+                    <span style="font-size:0.8rem; color:${t.checked ? '#4ade80' : '#fbbf24'};">
+                        ${t.checked ? '✅ Vérifié' : '⏳ En attente'}
+                    </span>
+                    <span style="font-size:0.78rem; color:#475569;"> · ${new Date(t.date).toLocaleString()}</span>
+                </div>
+                <button class="btn-danger" style="white-space:nowrap;" onclick="deleteTicket(${t.id})">🗑 Supprimer</button>
+            </div>
+        `).join('');
+    }
+
     async function loadTickets() {
         const container = document.getElementById('tickets-list');
+        const barEl     = document.getElementById('tickets-day-bar');
+        const statsEl   = document.getElementById('tickets-stats');
         container.innerHTML = '<p style="color:#aaa;">Chargement...</p>';
+        barEl.innerHTML = '';
+        statsEl.innerHTML = '';
         try {
-            const tickets = await fetchAPI('/owner/tickets');
-            if (!tickets.length) { container.innerHTML = '<p style="color:#aaa;">Aucun ticket</p>'; return; }
-            container.innerHTML = tickets.map(t => `
-                <div class="item-row">
-                    <div>
-                        <strong>${t.ticket_id || ('TKT' + t.id)}</strong> — ${t.player_name || 'Inconnu'} (${t.phone || '-'})<br>
-                        <span style="color:#a0a0b8;">Tirage: ${t.draw_name} | Mise: ${parseFloat(t.total_amount||0).toLocaleString()} G | Gain: ${parseFloat(t.win_amount||0).toLocaleString()} G</span><br>
-                        <span style="font-size:0.8rem; color:${t.checked ? '#4ade80' : '#fbbf24'};">${t.checked ? '✅ Vérifié' : '⏳ En attente'}</span>
-                        <span style="font-size:0.8rem; color:#6c7a91;"> · ${new Date(t.date).toLocaleString()}</span>
-                    </div>
-                    <button class="btn-danger" onclick="deleteTicket(${t.id})">Supprimer</button>
-                </div>
-            `).join('');
+            _allTickets = await fetchAPI('/owner/tickets');
+            if (!_allTickets.length) {
+                container.innerHTML = '<p style="color:#aaa;">Aucun ticket</p>';
+                return;
+            }
+
+            // Construire les 7 derniers jours qui ont des tickets
+            const today = new Date();
+            const days = [];
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(today);
+                d.setDate(today.getDate() - i);
+                const key = ticketDayKey(d.toISOString());
+                if (!days.includes(key)) days.push(key);
+            }
+
+            // Vérifier s'il y a des tickets plus anciens
+            const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
+            const hasOld = _allTickets.some(t => new Date(t.date) < cutoff);
+
+            // Sélectionner aujourd'hui par défaut
+            if (!_ticketDay || (_ticketDay !== 'old' && !days.includes(_ticketDay))) {
+                _ticketDay = days[0];
+            }
+
+            // Chips jours
+            barEl.innerHTML = days.map(key => {
+                const count = _allTickets.filter(t => ticketDayKey(t.date) === key).length;
+                return `<div class="tday-chip ${key === _ticketDay ? 'active' : ''}" data-day="${key}">
+                    ${ticketDayLabel(key)}
+                    <span style="font-size:0.75rem; opacity:0.75;">(${count})</span>
+                </div>`;
+            }).join('');
+
+            // Bouton "Plus anciens"
+            if (hasOld) {
+                const oldCount = _allTickets.filter(t => new Date(t.date) < cutoff).length;
+                barEl.innerHTML += `<div class="tday-chip old ${_ticketDay === 'old' ? 'active' : ''}" data-day="old">
+                    📦 Plus anciens <span style="font-size:0.75rem; opacity:0.75;">(${oldCount})</span>
+                </div>`;
+            }
+
+            barEl.querySelectorAll('.tday-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    _ticketDay = chip.dataset.day;
+                    barEl.querySelectorAll('.tday-chip').forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    renderTickets();
+                });
+            });
+
+            renderTickets();
         } catch(e) {
             container.innerHTML = `<p style="color:#ff4d4d;">❌ Erreur: ${e.message}</p>`;
         }
@@ -464,18 +594,132 @@
     async function deleteTicket(id) {
         if (!confirm('Supprimer ce ticket ?')) return;
         await fetchAPI(`/owner/tickets/${id}`, { method: 'DELETE' });
-        loadTickets();
+        // Retirer du cache local et re-rendre sans recharger
+        _allTickets = _allTickets.filter(t => t.id !== id);
+        renderTickets();
+        // Mettre à jour le compteur du chip actif
+        const chip = document.querySelector(`.tday-chip[data-day="${_ticketDay}"]`);
+        if (chip) {
+            const cnt = _ticketDay === 'old'
+                ? _allTickets.filter(t => new Date(t.date) < new Date(Date.now() - 7*86400000)).length
+                : _allTickets.filter(t => ticketDayKey(t.date) === _ticketDay).length;
+            chip.querySelector('span').textContent = `(${cnt})`;
+        }
+    }
+
+    let _allPlayers = [];
+    let _playerDay = null;
+
+    function playerDayKey(dateStr) {
+        const d = new Date(new Date(dateStr).getTime() - 5 * 3600 * 1000);
+        return d.toISOString().slice(0, 10);
+    }
+
+    function playerDayLabel(key) {
+        const today = new Date();
+        const todayKey = playerDayKey(today.toISOString());
+        const yest = new Date(today); yest.setDate(today.getDate() - 1);
+        const yesterdayKey = playerDayKey(yest.toISOString());
+        if (key === todayKey) return "Aujourd'hui";
+        if (key === yesterdayKey) return 'Hier';
+        const d = new Date(key + 'T12:00:00');
+        return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+    }
+
+    function renderPlayers() {
+        const container = document.getElementById('players-list');
+        const statsEl   = document.getElementById('players-stats');
+        let filtered;
+        if (_playerDay === 'old') {
+            const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
+            filtered = _allPlayers.filter(p => new Date(p.created_at) < cutoff);
+        } else {
+            filtered = _allPlayers.filter(p => playerDayKey(p.created_at) === _playerDay);
+        }
+
+        const totalBalance = filtered.reduce((s, p) => s + parseFloat(p.balance || 0), 0);
+        statsEl.innerHTML = `<span style="color:#c4b5fd;">${filtered.length} joueur(s)</span> · Solde total: <span style="color:#4ade80;">${totalBalance.toLocaleString()} G</span>`;
+
+        if (!filtered.length) {
+            container.innerHTML = '<p style="color:#aaa; padding:10px;">Aucun joueur inscrit cette période</p>';
+            return;
+        }
+        container.innerHTML = filtered.map(p => `
+            <div class="item-row">
+                <div>
+                    <strong style="color:#fff;">${p.name}</strong>
+                    <span style="color:#6c7a91;"> · ${p.phone}</span><br>
+                    <span style="font-size:0.85rem; color:#a0a0b8;">
+                        💰 Solde: <strong style="color:#4ade80;">${parseFloat(p.balance||0).toLocaleString()} G</strong>
+                        &nbsp;|&nbsp; 📍 Zone: ${p.zone || '-'}
+                    </span><br>
+                    <span style="font-size:0.78rem; color:#475569;">
+                        📅 Inscrit le ${new Date(p.created_at).toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}
+                    </span>
+                </div>
+            </div>
+        `).join('');
     }
 
     async function loadPlayers() {
-        const players = await fetchAPI('/owner/players');
         const container = document.getElementById('players-list');
-        if (!players.length) { container.innerHTML = '<p>Aucun joueur</p>'; return; }
-        container.innerHTML = players.map(p => `
-            <div class="item-row">
-                <div><strong>${p.name}</strong> - ${p.phone} | Solde: ${p.balance} G | Zone: ${p.zone || '-'}<br>Inscrit: ${new Date(p.created_at).toLocaleDateString()}</div>
-            </div>
-        `).join('');
+        const barEl     = document.getElementById('players-day-bar');
+        const statsEl   = document.getElementById('players-stats');
+        container.innerHTML = '<p style="color:#aaa;">Chargement...</p>';
+        barEl.innerHTML = '';
+        statsEl.innerHTML = '';
+        try {
+            _allPlayers = await fetchAPI('/owner/players');
+            if (!_allPlayers.length) {
+                container.innerHTML = '<p style="color:#aaa;">Aucun joueur</p>';
+                return;
+            }
+
+            // 7 derniers jours
+            const today = new Date();
+            const days = [];
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(today);
+                d.setDate(today.getDate() - i);
+                const key = playerDayKey(d.toISOString());
+                if (!days.includes(key)) days.push(key);
+            }
+
+            const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
+            const hasOld = _allPlayers.some(p => new Date(p.created_at) < cutoff);
+
+            if (!_playerDay || (_playerDay !== 'old' && !days.includes(_playerDay))) {
+                _playerDay = days[0];
+            }
+
+            barEl.innerHTML = days.map(key => {
+                const count = _allPlayers.filter(p => playerDayKey(p.created_at) === key).length;
+                return `<div class="tday-chip ${key === _playerDay ? 'active' : ''}" data-pday="${key}">
+                    ${playerDayLabel(key)}
+                    <span style="font-size:0.75rem; opacity:0.75;">(${count})</span>
+                </div>`;
+            }).join('');
+
+            if (hasOld) {
+                const oldCount = _allPlayers.filter(p => new Date(p.created_at) < cutoff).length;
+                barEl.innerHTML += `<div class="tday-chip old ${_playerDay === 'old' ? 'active' : ''}" data-pday="old">
+                    📦 Plus anciens <span style="font-size:0.75rem; opacity:0.75;">(${oldCount})</span>
+                </div>`;
+            }
+
+            barEl.querySelectorAll('.tday-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    _playerDay = chip.dataset.pday;
+                    barEl.querySelectorAll('.tday-chip').forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    renderPlayers();
+                });
+            });
+
+            renderPlayers();
+        } catch(e) {
+            container.innerHTML = `<p style="color:#ff4d4d;">❌ Erreur: ${e.message}</p>`;
+        }
     }
 
     // Gestion des rapports

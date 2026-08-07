@@ -18,6 +18,17 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname)));
 
+// Gestionnaire d'erreurs global — toujours retourner du JSON
+app.use((err, req, res, next) => {
+    console.error('❌ Erreur Express non gérée:', err.message);
+    res.status(500).json({ error: err.message || 'Erreur interne du serveur' });
+});
+
+// Route 404 — toujours retourner du JSON pour les routes /api/*
+app.use('/api/*', (req, res) => {
+    res.status(404).json({ error: `Route introuvable: ${req.originalUrl}` });
+});
+
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.DATABASE_URL?.includes('sslmode=require') ? undefined : { rejectUnauthorized: false }

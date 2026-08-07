@@ -25,8 +25,8 @@
         .carousel-dot { width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,0.4); cursor:pointer; transition:0.3s; }
         .carousel-dot.active { background:white; width:20px; border-radius:4px; }
         .carousel-empty { height:160px; background:linear-gradient(135deg,#1e1b4b,#312e81); border-radius:20px; margin:15px 15px 0; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.35); font-size:0.85rem; }
-        .carousel-text { background:#fef9c3; color:#854d0e; font-weight:bold; padding:10px; border-radius:30px; margin:0 15px 15px; text-align:center; font-size:0.9rem; box-shadow:0 2px 8px rgba(0,0,0,0.05); animation:pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity:0.8; transform:scale(1); } 50% { opacity:1; transform:scale(1.02); background:#fde047; } 100% { opacity:0.8; transform:scale(1); } }
+        .carousel-text { background:linear-gradient(90deg,#1e1b4b,#312e81); color:#fde68a; font-weight:700; border-radius:30px; margin:10px 15px; overflow:hidden; height:38px; display:flex; align-items:center; box-shadow:0 2px 8px rgba(0,0,0,0.15); }
+        .marquee-inner { display:inline-block; white-space:nowrap; animation:marquee-ltr 18s linear infinite; padding-left:100%; font-size:0.88rem; } @keyframes marquee-ltr { from { transform:translateX(0); } to { transform:translateX(-100%); } }
         .tabs { display:flex; background:white; border-bottom:1px solid #e9edf2; position:sticky; top:84px; z-index:15; padding:0 12px; }
         .tab { flex:1; text-align:center; padding:14px 0 12px; font-weight:600; color:#6c7a91; cursor:pointer; border-bottom:3px solid transparent; transition:0.2s; }
         .tab.active { color:#3b82f6; border-bottom-color:#3b82f6; background:rgba(59,130,246,0.04); }
@@ -46,9 +46,9 @@
         .options-panel { display:flex; gap:12px; margin:15px 0 10px; flex-wrap:wrap; }
         .option-chip { background:#eef2ff; padding:6px 18px; border-radius:40px; font-size:0.8rem; font-weight:500; cursor:pointer; }
         .option-chip.active { background:#3b82f6; color:white; }
-        .bet-row { display:flex; gap:10px; margin:18px 0 8px; align-items:center; flex-wrap:wrap; }
-        .bet-row input { width:120px; padding:12px; border:1px solid #cbd5e1; border-radius:48px; font-size:0.9rem; text-align:center; }
-        .btn-add-icon { background:#3b82f6; border:none; border-radius:50%; width:48px; height:48px; display:flex; align-items:center; justify-content:center; color:white; font-size:1.8rem; cursor:pointer; transition:0.2s; }
+        .bet-row { display:flex; gap:8px; margin:14px 0 8px; align-items:center; }
+        .bet-row input { flex:1; min-width:0; padding:12px; border:1.5px solid #cbd5e1; border-radius:48px; font-size:0.9rem; text-align:center; }
+        .btn-add-icon { background:#3b82f6; border:none; border-radius:50%; width:46px; height:46px; min-width:46px; display:flex; align-items:center; justify-content:center; color:white; font-size:1.6rem; cursor:pointer; transition:0.2s; flex-shrink:0; }
         .btn-add-icon:hover { background:#2563eb; transform:scale(1.05); }
         .cart-items { max-height:240px; overflow-y:auto; margin:15px 0; }
         .cart-item { background:#f8fafc; border-radius:60px; padding:10px 16px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; border:1px solid #e2edf7; }
@@ -71,6 +71,10 @@
         .day-filter-bar::-webkit-scrollbar { display:none; }
         .day-chip { background:#f1f4f9; border:1px solid #e2e8f0; border-radius:40px; padding:7px 16px; font-size:0.78rem; font-weight:600; white-space:nowrap; cursor:pointer; transition:0.2s; color:#475569; }
         .day-chip.active { background:#312e81; color:white; border-color:#312e81; }
+        .day-chip.old-chip { background:#fef9c3; border-color:#fbbf24; color:#92400e; }
+        .day-chip.old-chip.active { background:#b45309; color:white; border-color:#b45309; }
+        .day-chip.custom-chip { background:#ede9fe; border-color:#a78bfa; color:#5b21b6; }
+        .day-chip.custom-chip.active { background:#7c3aed; color:white; border-color:#7c3aed; }
         .result-day-header { font-weight:700; color:#1e293b; font-size:0.85rem; margin:14px 0 8px; padding-left:4px; border-left:4px solid #3b82f6; padding-left:10px; }
         .result-card { border-left:5px solid #10b981; }
         .result-numbers { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
@@ -163,7 +167,16 @@
         </div>
     </div>
 
-    <div id="historyScreen" class="screen"><div id="historyContainer" class="empty-msg">Chargement...</div></div>
+    <div id="historyScreen" class="screen">
+        <div class="day-filter-bar" id="historyDayBar"></div>
+        <!-- Date personnalisée -->
+        <div id="historyCustomDate" style="display:none; margin-bottom:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <input type="date" id="historyDatePicker" style="flex:1; padding:9px 14px; border:1.5px solid #cbd5e1; border-radius:40px; font-size:0.85rem; outline:none;">
+            <button onclick="applyCustomDate()" style="background:#312e81; color:white; border:none; border-radius:40px; padding:9px 18px; font-weight:600; cursor:pointer; white-space:nowrap;">Voir</button>
+        </div>
+        <div id="historyStats" style="font-size:0.75rem;color:#6c7a91;text-align:center;margin-bottom:10px;"></div>
+        <div id="historyContainer" class="empty-msg">Chargement...</div>
+    </div>
     <div id="resultsScreen" class="screen">
         <div class="day-filter-bar" id="dayFilterBar"></div>
         <div id="resultsContainer" class="empty-msg">Chargement...</div>
@@ -205,13 +218,25 @@
     let adsImages = [];
 
     async function apiFetch(endpoint, options = {}) {
-        const res = await fetch(`${API_BASE}${endpoint}`, {
-            ...options,
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', ...options.headers }
-        });
+        let res;
+        try {
+            res = await fetch(`${API_BASE}${endpoint}`, {
+                ...options,
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', ...options.headers }
+            });
+        } catch(networkErr) {
+            throw new Error('Impossible de joindre le serveur. Vérifie ta connexion.');
+        }
         if (res.status === 401) { localStorage.clear(); window.location.href = 'index.html'; throw new Error('Session expirée'); }
+        // Vérifier que la réponse est bien du JSON avant de parser
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+            const text = await res.text();
+            console.error(`Réponse non-JSON [${res.status}] pour ${endpoint}:`, text.slice(0, 200));
+            throw new Error(`Erreur serveur (${res.status}) — réponse inattendue`);
+        }
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Erreur serveur');
+        if (!res.ok) throw new Error(data.error || `Erreur serveur (${res.status})`);
         return data;
     }
 
@@ -313,8 +338,8 @@
                 emptyDiv.style.display = 'flex';
             }
             if (announcement && announcement.trim() !== "") {
-                textDiv.style.display = 'block';
-                textDiv.innerText = announcement;
+                textDiv.style.display = 'flex';
+                textDiv.innerHTML = `<div class="marquee-inner">${announcement} &nbsp;&nbsp;&nbsp; ${announcement} &nbsp;&nbsp;&nbsp; ${announcement}</div>`;
             } else {
                 textDiv.style.display = 'none';
             }
@@ -458,40 +483,159 @@
         } catch (err) { alert("Erreur: " + err.message); }
     }
 
+    let _allTickets = [];
+    let _historyDay = null; // 'YYYY-MM-DD' | 'old' | 'custom'
+    let _customDate = null; // 'YYYY-MM-DD' quand mode custom
+
+    function histDayKey(dateStr) {
+        const d = new Date(new Date(dateStr).getTime() - 5 * 3600 * 1000);
+        return d.toISOString().slice(0, 10);
+    }
+
+    function histDayLabel(key) {
+        const todayKey = histDayKey(new Date().toISOString());
+        const yest = new Date(); yest.setDate(yest.getDate() - 1);
+        const yesterdayKey = histDayKey(yest.toISOString());
+        if (key === todayKey) return "Aujourd'hui";
+        if (key === yesterdayKey) return 'Hier';
+        const d = new Date(key + 'T12:00:00');
+        return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+    }
+
+    function renderHistory() {
+        const container = document.getElementById('historyContainer');
+        const statsEl   = document.getElementById('historyStats');
+        const customDiv = document.getElementById('historyCustomDate');
+
+        // Montrer/masquer le date picker
+        customDiv.style.display = _historyDay === 'custom' ? 'flex' : 'none';
+
+        let filtered;
+        if (_historyDay === 'old') {
+            const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
+            filtered = _allTickets.filter(t => new Date(t.date) < cutoff);
+        } else if (_historyDay === 'custom') {
+            const target = _customDate || histDayKey(new Date().toISOString());
+            filtered = _allTickets.filter(t => histDayKey(t.date) === target);
+        } else {
+            filtered = _allTickets.filter(t => histDayKey(t.date) === _historyDay);
+        }
+
+        const totalMise = filtered.reduce((s, t) => s + parseFloat(t.total_amount || 0), 0);
+        const totalGain = filtered.reduce((s, t) => s + parseFloat(t.win_amount   || 0), 0);
+        statsEl.innerHTML = filtered.length
+            ? `${filtered.length} ticket(s) · Mises : <strong>${totalMise.toLocaleString()} G</strong> · Gains : <strong style="color:#10b981;">${totalGain.toLocaleString()} G</strong>`
+            : '';
+
+        if (!filtered.length) {
+            container.innerHTML = '<div class="empty-msg"><i class="fas fa-ticket-alt"></i><br>Aucun ticket pour cette période</div>';
+            return;
+        }
+        container.innerHTML = filtered.map(t => {
+            const win = parseFloat(t.win_amount) || 0;
+            let statusBadge = !t.checked
+                ? '<span class="badge badge-wait">⏳ En attente</span>'
+                : (win > 0
+                    ? `<span class="badge badge-win">🏆 Gagné ${win.toLocaleString()} G</span>`
+                    : '<span class="badge badge-loss">❌ Perdu</span>');
+            const betsArray = Array.isArray(t.bets) ? t.bets : [];
+            const preview = betsArray.slice(0, 3).map(b =>
+                `<span style="background:#eef2ff;padding:2px 8px;border-radius:20px;font-size:0.7rem;">${b.game} <strong>${b.number || b.cleanNumber}</strong></span>`
+            ).join(' ');
+            const moreCount = betsArray.length > 3
+                ? `<span style="font-size:0.7rem;color:#6c7a91;">+${betsArray.length - 3} autres</span>` : '';
+            return `<div class="history-card">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+                    <strong>${t.draw_name}</strong> ${statusBadge}
+                </div>
+                <div style="font-size:0.72rem;color:#6c7a91;margin:4px 0;">
+                    🎫 Ticket #${t.ticket_id || t.id} &nbsp;·&nbsp; 📅 ${new Date(t.date).toLocaleString()}
+                </div>
+                <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">${preview}${moreCount}</div>
+                <div style="margin-top:6px;font-weight:700;">💰 Mise : ${parseFloat(t.total_amount).toLocaleString()} G ${win > 0 ? `<span style="color:#10b981;">→ Gain : ${win.toLocaleString()} G</span>` : ''}</div>
+            </div>`;
+        }).join('');
+    }
+
+    function applyCustomDate() {
+        const picker = document.getElementById('historyDatePicker');
+        if (!picker.value) return;
+        _customDate = picker.value; // YYYY-MM-DD
+        renderHistory();
+    }
+
     async function loadHistory() {
         const container = document.getElementById('historyContainer');
-        container.innerHTML = '<div class="empty-msg"><i class="fas fa-spinner fa-spin"></i> Chargement des tickets...</div>';
+        const barEl     = document.getElementById('historyDayBar');
+        const statsEl   = document.getElementById('historyStats');
+        container.innerHTML = '<div class="empty-msg"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>';
+        barEl.innerHTML = '';
+        statsEl.innerHTML = '';
         try {
             const data = await apiFetch('/player/tickets');
-            const tickets = data.tickets;
-            if (!tickets || !tickets.length) {
+            _allTickets = data.tickets || [];
+
+            if (!_allTickets.length) {
                 container.innerHTML = '<div class="empty-msg"><i class="fas fa-ticket-alt"></i><br>Aucun ticket pour le moment</div>';
                 return;
             }
-            container.innerHTML = tickets.map(t => {
-                const win = parseFloat(t.win_amount) || 0;
-                let statusBadge = !t.checked
-                    ? '<span class="badge badge-wait">⏳ En attente</span>'
-                    : (win > 0
-                        ? `<span class="badge badge-win">🏆 Gagné ${win.toLocaleString()} G</span>`
-                        : '<span class="badge badge-loss">❌ Perdu</span>');
-                const betsArray = Array.isArray(t.bets) ? t.bets : [];
-                const preview = betsArray.slice(0, 3).map(b => `<span style="background:#eef2ff;padding:2px 8px;border-radius:20px;font-size:0.7rem;">${b.game} <strong>${b.number || b.cleanNumber}</strong></span>`).join(' ');
-                const moreCount = betsArray.length > 3 ? `<span style="font-size:0.7rem;color:#6c7a91;">+${betsArray.length - 3} autres</span>` : '';
-                return `<div class="history-card">
-                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-                        <strong>${t.draw_name}</strong> ${statusBadge}
-                    </div>
-                    <div style="font-size:0.72rem;color:#6c7a91;margin:4px 0;">
-                        🎫 Ticket #${t.ticket_id || t.id} &nbsp;·&nbsp; 📅 ${new Date(t.date).toLocaleString()}
-                    </div>
-                    <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">${preview}${moreCount}</div>
-                    <div style="margin-top:6px;font-weight:700;">💰 Mise : ${parseFloat(t.total_amount).toLocaleString()} G ${win > 0 ? `<span style="color:#10b981;">→ Gain : ${win.toLocaleString()} G</span>` : ''}</div>
+
+            // 7 derniers jours
+            const today = new Date();
+            const days = [];
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(today); d.setDate(today.getDate() - i);
+                const key = histDayKey(d.toISOString());
+                if (!days.includes(key)) days.push(key);
+            }
+
+            const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
+            const hasOld = _allTickets.some(t => new Date(t.date) < cutoff);
+
+            if (!_historyDay || (_historyDay !== 'old' && _historyDay !== 'custom' && !days.includes(_historyDay))) {
+                _historyDay = days[0];
+            }
+
+            // Chips jours
+            barEl.innerHTML = days.map(key => {
+                const count = _allTickets.filter(t => histDayKey(t.date) === key).length;
+                return `<div class="day-chip ${key === _historyDay ? 'active' : ''}" data-hday="${key}">
+                    ${histDayLabel(key)} <span style="font-size:0.7rem;opacity:0.7;">(${count})</span>
                 </div>`;
             }).join('');
+
+            // Bouton Plus anciens
+            if (hasOld) {
+                const oldCount = _allTickets.filter(t => new Date(t.date) < cutoff).length;
+                barEl.innerHTML += `<div class="day-chip old-chip ${_historyDay === 'old' ? 'active' : ''}" data-hday="old">
+                    📦 Anciens <span style="font-size:0.7rem;opacity:0.7;">(${oldCount})</span>
+                </div>`;
+            }
+
+            // Bouton Date personnalisée
+            barEl.innerHTML += `<div class="day-chip custom-chip ${_historyDay === 'custom' ? 'active' : ''}" data-hday="custom">
+                📅 Date perso
+            </div>`;
+
+            barEl.querySelectorAll('.day-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    _historyDay = chip.dataset.hday;
+                    barEl.querySelectorAll('.day-chip').forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    if (_historyDay === 'custom') {
+                        // Mettre la date d'aujourd'hui par défaut dans le picker
+                        const picker = document.getElementById('historyDatePicker');
+                        if (!picker.value) picker.value = histDayKey(new Date().toISOString());
+                        _customDate = picker.value;
+                    }
+                    renderHistory();
+                });
+            });
+
+            renderHistory();
         } catch(e) {
             console.error(e);
-            container.innerHTML = '<div class="empty-msg" style="color:#dc2626;"><i class="fas fa-exclamation-circle"></i><br>Erreur lors du chargement des tickets.<br><small>' + e.message + '</small></div>';
+            container.innerHTML = '<div class="empty-msg" style="color:#dc2626;"><i class="fas fa-exclamation-circle"></i><br>Erreur chargement tickets.<br><small>' + e.message + '</small></div>';
         }
     }
 
