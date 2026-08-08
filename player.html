@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <!-- ⚠️ IMPORTANT : changer cette URL si ton serveur Express tourne sur un autre domaine/port -->
+    <meta name="api-base" content="https://lotato-lsvu.onrender.com/api">
     <title>LOTATO · Joueur</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -76,6 +78,15 @@
         .day-chip.custom-chip { background:#ede9fe; border-color:#a78bfa; color:#5b21b6; }
         .day-chip.custom-chip.active { background:#7c3aed; color:white; border-color:#7c3aed; }
         .result-day-header { font-weight:700; color:#1e293b; font-size:0.85rem; margin:14px 0 8px; padding-left:4px; border-left:4px solid #3b82f6; padding-left:10px; }
+        .pam-quick-bet { background:#eef2ff; border:1.5px solid #c7d2fe; border-radius:40px; padding:8px 16px; font-weight:700; font-size:0.85rem; cursor:pointer; color:#3730a3; transition:0.2s; }
+        .pam-quick-bet:hover,.pam-quick-bet.selected { background:#3730a3; color:white; border-color:#3730a3; }
+        .pam-ball { width:56px; height:56px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:1.2rem; font-weight:900; border:3px solid; margin:0 4px; }
+        .pam-ball.match { box-shadow:0 0 16px rgba(16,185,129,0.6); transform:scale(1.15); }
+        .pam-ball-lot1 { background:#fef3c7; color:#92400e; border-color:#fbbf24; }
+        .pam-ball-lot2 { background:#dbeafe; color:#1e40af; border-color:#93c5fd; }
+        .pam-ball-lot3 { background:#fce7f3; color:#9d174d; border-color:#f9a8d4; }
+        @keyframes pamRoll { 0%{transform:scale(0) rotate(0deg);opacity:0} 70%{transform:scale(1.2) rotate(360deg);opacity:1} 100%{transform:scale(1) rotate(360deg);} }
+        .pam-ball { animation:pamRoll 0.6s ease-out forwards; }
         .result-card { border-left:5px solid #10b981; }
         .result-numbers { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
         .result-ball { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.9rem; }
@@ -107,6 +118,7 @@
 
     <div class="tabs">
         <div class="tab active" data-tab="play"><i class="fas fa-gamepad"></i> Jouer</div>
+        <div class="tab" data-tab="lotopam"><i class="fas fa-dice"></i> Loto Pam</div>
         <div class="tab" data-tab="history"><i class="fas fa-receipt"></i> Tickets</div>
         <div class="tab" data-tab="results"><i class="fas fa-trophy"></i> Résultats</div>
         <div class="tab" data-tab="profile"><i class="fas fa-user-circle"></i> Profil</div>
@@ -167,7 +179,61 @@
         </div>
     </div>
 
-    <div id="historyScreen" class="screen">
+    <!-- ===== LOTO PAM ===== -->
+    <div id="lotopamScreen" class="screen">
+        <div class="card" style="text-align:center;">
+            <div style="font-size:2rem; margin-bottom:4px;">🎰</div>
+            <div style="font-size:1.3rem; font-weight:800; color:#1e293b;">Loto Pam</div>
+            <div style="font-size:0.82rem; color:#6c7a91; margin-top:4px;">Choisissez 3 numéros (00–99) et lancez le tirage instantané</div>
+        </div>
+
+        <div class="card">
+            <div style="font-weight:700; margin-bottom:14px;"><i class="fas fa-hashtag"></i> Vos 3 numéros</div>
+            <div style="display:flex; gap:10px; margin-bottom:14px;">
+                <div style="flex:1; text-align:center;">
+                    <div style="font-size:0.72rem; font-weight:700; color:#f59e0b; margin-bottom:6px;">🥇 1er Lot</div>
+                    <input type="number" id="pam-num1" min="0" max="99" placeholder="00–99"
+                        style="width:100%; padding:14px 0; text-align:center; font-size:1.3rem; font-weight:800;
+                               border:2px solid #fbbf24; border-radius:16px; outline:none; color:#1e293b;">
+                </div>
+                <div style="flex:1; text-align:center;">
+                    <div style="font-size:0.72rem; font-weight:700; color:#3b82f6; margin-bottom:6px;">🥈 2e Lot</div>
+                    <input type="number" id="pam-num2" min="0" max="99" placeholder="00–99"
+                        style="width:100%; padding:14px 0; text-align:center; font-size:1.3rem; font-weight:800;
+                               border:2px solid #93c5fd; border-radius:16px; outline:none; color:#1e293b;">
+                </div>
+                <div style="flex:1; text-align:center;">
+                    <div style="font-size:0.72rem; font-weight:700; color:#ec4899; margin-bottom:6px;">🥉 3e Lot</div>
+                    <input type="number" id="pam-num3" min="0" max="99" placeholder="00–99"
+                        style="width:100%; padding:14px 0; text-align:center; font-size:1.3rem; font-weight:800;
+                               border:2px solid #f9a8d4; border-radius:16px; outline:none; color:#1e293b;">
+                </div>
+            </div>
+
+            <div style="font-weight:700; margin-bottom:10px;"><i class="fas fa-coins"></i> Mise</div>
+            <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+                <button class="pam-quick-bet" data-amount="10">10 G</button>
+                <button class="pam-quick-bet" data-amount="25">25 G</button>
+                <button class="pam-quick-bet" data-amount="50">50 G</button>
+                <button class="pam-quick-bet" data-amount="100">100 G</button>
+            </div>
+            <input type="number" id="pam-amount" placeholder="Ou entrez un montant..." min="1"
+                style="width:100%; padding:13px; border:1.5px solid #cbd5e1; border-radius:40px; font-size:0.95rem; text-align:center; box-sizing:border-box; outline:none; margin-bottom:14px;">
+
+            <button id="pam-launch-btn"
+                style="width:100%; padding:16px; background:linear-gradient(135deg,#7c3aed,#2563eb); color:white;
+                       border:none; border-radius:40px; font-size:1.1rem; font-weight:800; cursor:pointer; letter-spacing:0.5px;">
+                🎰 Lancer le tirage
+            </button>
+            <div id="pam-error" style="color:#dc2626; font-size:0.8rem; text-align:center; margin-top:8px; display:none;"></div>
+        </div>
+
+        <!-- Résultat -->
+        <div id="pam-result" style="display:none;">
+            <div class="card" id="pam-result-card" style="text-align:center;">
+            </div>
+        </div>
+    </div>
         <div class="day-filter-bar" id="historyDayBar"></div>
         <!-- Date personnalisée -->
         <div id="historyCustomDate" style="display:none; margin-bottom:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
@@ -195,7 +261,18 @@
 </div>
 
 <script>
-    const API_BASE = window.location.origin + '/api';
+    // API_BASE : si le fichier est servi par Next.js ou un autre proxy,
+    // définir window.LOTATO_API dans un script avant ce fichier,
+    // ou ajouter un meta tag <meta name="api-base" content="https://ton-serveur.onrender.com/api">
+    const API_BASE = (() => {
+        // 1. Variable globale définie manuellement (priorité max)
+        if (window.LOTATO_API) return window.LOTATO_API;
+        // 2. Meta tag <meta name="api-base" content="...">
+        const meta = document.querySelector('meta[name="api-base"]');
+        if (meta && meta.content) return meta.content;
+        // 3. Même origine (fonctionne si Express sert player.html directement)
+        return window.location.origin + '/api';
+    })();
     let token = localStorage.getItem('auth_token');
     let playerId = localStorage.getItem('player_id');
     if (!token || !playerId) window.location.href = 'index.html';
@@ -854,6 +931,122 @@
 
     function logout() { localStorage.clear(); window.location.href = 'index.html'; }
 
+    // ===== LOTO PAM =====
+    function initLotoPam() {
+        // Boutons mise rapide
+        document.querySelectorAll('.pam-quick-bet').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('pam-amount').value = btn.dataset.amount;
+                document.querySelectorAll('.pam-quick-bet').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+            });
+        });
+
+        // Valider numéro 00-99 à la saisie
+        ['pam-num1','pam-num2','pam-num3'].forEach(id => {
+            document.getElementById(id).addEventListener('input', function() {
+                let v = parseInt(this.value);
+                if (isNaN(v)) return;
+                if (v < 0) this.value = 0;
+                if (v > 99) this.value = 99;
+            });
+        });
+
+        document.getElementById('pam-launch-btn').addEventListener('click', playLotoPam);
+    }
+
+    async function playLotoPam() {
+        const errorDiv = document.getElementById('pam-error');
+        const btn      = document.getElementById('pam-launch-btn');
+        errorDiv.style.display = 'none';
+
+        const n1 = document.getElementById('pam-num1').value.trim();
+        const n2 = document.getElementById('pam-num2').value.trim();
+        const n3 = document.getElementById('pam-num3').value.trim();
+        const amt = document.getElementById('pam-amount').value.trim();
+
+        if (n1 === '' || n2 === '' || n3 === '') {
+            errorDiv.textContent = '⚠️ Entrez vos 3 numéros (00 à 99)'; errorDiv.style.display = 'block'; return;
+        }
+        if (!amt || parseFloat(amt) <= 0) {
+            errorDiv.textContent = '⚠️ Entrez un montant valide'; errorDiv.style.display = 'block'; return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = '⏳ Tirage en cours...';
+
+        try {
+            const result = await apiFetch('/player/lotopam/play', {
+                method: 'POST',
+                body: JSON.stringify({ num1: n1, num2: n2, num3: n3, amount: amt })
+            });
+            showLotoPamResult(result);
+            // Mettre à jour le solde affiché
+            document.getElementById('balanceAmount').textContent = parseFloat(result.newBalance).toLocaleString() + ' G';
+        } catch(e) {
+            errorDiv.textContent = '❌ ' + e.message;
+            errorDiv.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '🎰 Lancer le tirage';
+        }
+    }
+
+    function showLotoPamResult(r) {
+        const { tirage, playerNumbers, winAmount, winDetails } = r;
+        const won = winAmount > 0;
+
+        const matchSet = new Set(winDetails.map(w => w.lot));
+
+        const ballHtml = (num, lot, pNum) => {
+            const cls = `pam-ball pam-ball-lot${lot}${matchSet.has(lot) ? ' match' : ''}`;
+            const delay = `style="animation-delay:${(lot-1)*0.2}s"`;
+            const icon  = lot === 1 ? '🥇' : lot === 2 ? '🥈' : '🥉';
+            return `<div style="text-align:center; flex:1;">
+                <div style="font-size:0.72rem; font-weight:700; color:#6c7a91; margin-bottom:6px;">${icon} Lot ${lot}</div>
+                <div class="pam-ball-wrap" style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+                    <div style="font-size:0.68rem; color:#94a3b8;">Vous: <strong>${String(pNum).padStart(2,'0')}</strong></div>
+                    <div class="${cls}" ${delay}>${String(num).padStart(2,'0')}</div>
+                    <div style="font-size:0.72rem; font-weight:700; color:${matchSet.has(lot) ? '#10b981' : '#ef4444'};">
+                        ${matchSet.has(lot) ? '✅ Match!' : '❌ Raté'}
+                    </div>
+                </div>
+            </div>`;
+        };
+
+        const gainLines = winDetails.map(w =>
+            `<div>Lot ${w.lot} → <strong style="color:#10b981;">+${parseFloat(w.gain).toLocaleString()} G</strong></div>`
+        ).join('');
+
+        const card = document.getElementById('pam-result-card');
+        card.innerHTML = `
+            <div style="font-size:1.1rem; font-weight:800; margin-bottom:16px; color:${won ? '#10b981' : '#ef4444'};">
+                ${won ? '🎉 Félicitations !' : '😔 Pas de chance cette fois'}
+            </div>
+            <div style="display:flex; justify-content:center; gap:8px; margin-bottom:18px;">
+                ${ballHtml(tirage.t1, 1, playerNumbers.p1)}
+                ${ballHtml(tirage.t2, 2, playerNumbers.p2)}
+                ${ballHtml(tirage.t3, 3, playerNumbers.p3)}
+            </div>
+            ${won
+                ? `<div style="background:#f0fdf4; border-radius:14px; padding:12px; margin-bottom:12px;">
+                       ${gainLines}
+                       <div style="margin-top:6px; font-size:1rem; font-weight:800; color:#065f46;">
+                           Total gagné : ${parseFloat(winAmount).toLocaleString()} G
+                       </div>
+                   </div>`
+                : `<div style="background:#fef2f2; border-radius:14px; padding:12px; margin-bottom:12px; color:#991b1b; font-size:0.88rem;">
+                       Aucune correspondance. Réessayez !
+                   </div>`}
+            <button onclick="document.getElementById('pam-result').style.display='none';"
+                style="background:#312e81; color:white; border:none; border-radius:40px; padding:10px 28px; font-weight:700; cursor:pointer;">
+                Rejouer
+            </button>`;
+
+        document.getElementById('pam-result').style.display = 'block';
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', () => {
             const target = tab.dataset.tab;
@@ -874,12 +1067,12 @@
     document.getElementById('logoutBtn').addEventListener('click', logout);
 
     (async function init() {
-        // Afficher le placeholder carrousel dès le départ
         document.getElementById('carouselEmpty').style.display = 'flex';
         await refreshProfile();
         await loadDraws();
         await loadSettingsAndLimits();
         initGameSelectors();
+        initLotoPam();
         setupAutoFocus();
         loadHistory();
         loadResults();
