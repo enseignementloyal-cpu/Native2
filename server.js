@@ -307,6 +307,166 @@ app.post('/api/owner/generate-recharge-code', authenticateOwner, async (req, res
     await pool.query('INSERT INTO recharge_codes (code, amount) VALUES ($1, $2)', [code, amount]);
     res.json({ success: true, code, amount });
 });
+
+// ==================== LOTO PAM ====================
+
+// Propriétaire: lire/écrire le % de gain Loto Pam
+app.get('/api/owner/lotopam-settings', authenticateOwner, async (req, res) => {
+    try {
+        const r = await pool.query('SELECT advanced_settings FROM lottery_settings LIMIT 1');
+        const adv = r.rows[0]?.advanced_settings || {};
+        const settings = typeof adv === 'string' ? JSON.parse(adv) : adv;
+        res.json({
+            winPercent: settings.lotopam_win_percent ?? 20,
+            multiplierLot1: settings.lotopam_mult_lot1 ?? 70,
+            multiplierLot2: settings.lotopam_mult_lot2 ?? 35,
+            multiplierLot3: settings.lotopam_mult_lot3 ?? 20
+        });
+    } catch(err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/owner/lotopam-settings', authenticateOwner, async (req, res) => {
+    try {
+        const { winPercent, multiplierLot1, multiplierLot2, multiplierLot3 } = req.body;
+        const r = await pool.query('SELECT advanced_settings FROM lottery_settings LIMIT 1');
+        const cur = r.rows[0]?.advanced_settings || {};
+        const adv = typeof cur === 'string' ? JSON.parse(cur) : (cur || {});
+        adv.lotopam_win_percent   = parseFloat(winPercent)       ?? 20;
+        adv.lotopam_mult_lot1     = parseFloat(multiplierLot1)   ?? 70;
+        adv.lotopam_mult_lot2     = parseFloat(multiplierLot2)   ?? 35;
+        adv.lotopam_mult_lot3     = parseFloat(multiplierLot3)   ?? 20;
+        await pool.query('UPDATE lottery_settings SET advanced_settings=$1 WHERE id=1', [JSON.stringify(adv)]);
+        res.json({ success: true });
+    } catch(err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Joueur: lancer un Loto Pam
+app.post('/api/player/lotopam/play', authenticatePlayer, async (req, res) => {
+    const { num1, num2, num3, amount } = req.body;
+    if (!num1 || !num2 || !num3 || !amount) {
+        return res.status(400).json({ error: 'num1, num2, num3 et amount requis' });
+    }
+    const mise = parseFloat(amount);
+    if (isNaN(mise) || mise <= 0) return res.status(400).json({ error: 'Montant invalide' });
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Vérifier solde
+        const playerRes = await client.query('SELECT balance FROM players WHERE id=$1 FOR UPDATE', [req.player.id]);
+        const balance = parseFloat(playerRes.rows[0]?.balance || 0);
+        if (balance < mise) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: `Solde insuffisant (${balance.toLocaleString()} G)` });
+        }
+
+        // Lire % de gain depuis settings
+        const settingsRes = await client.query('SELECT advanced_settings FROM lottery_settings LIMIT 1');
+        const adv = settingsRes.rows[0]?.advanced_settings || {};
+        const settings = typeof adv === 'string' ? JSON.parse(adv) : (adv || {});
+        const winPercent   = parseFloat(settings.lotopam_win_percent  ?? 20); // % chance de gagner
+        const multLot1     = parseFloat(settings.lotopam_mult_lot1    ?? 70);
+        const multLot2     = parseFloat(settings.lotopam_mult_lot2    ?? 35);
+        const multLot3     = parseFloat(settings.lotopam_mult_lot3    ?? 20);
+
+        // Normaliser les numéros du joueur (2 chiffres)
+        const p1 = String(num1).padStart(2, '0').slice(-2);
+        const p2 = String(num2).padStart(2, '0').slice(-2);
+        const p3 = String(num3).padStart(2, '0').slice(-2);
+
+        // Générer le tirage selon la difficulté
+        const rand = () => String(Math.floor(Math.random() * 100)).padStart(2, '0');
+        const roll = Math.random() * 100; // 0-100
+
+        let t1, t2, t3;
+        if (roll < winPercent) {
+            // Joueur gagne sur les 3 lots (jackpot complet)
+            t1 = p1; t2 = p2; t3 = p3;
+        } else if (roll < winPercent * 2) {
+            // Joueur gagne sur lot1 seulement
+            t1 = p1; t2 = rand(); t3 = rand();
+            // S'assurer que t2 et t3 ne matchent pas par hasard
+            if (t2 === p2) t2 = String((parseInt(t2) + 1) % 100).padStart(2, '0');
+            if (t3 === p3) t3 = String((parseInt(t3) + 1) % 100).padStart(2, '0');
+        } else if (roll < winPercent * 2.5) {
+            // Joueur gagne lot2
+            t1 = rand(); t2 = p2; t3 = rand();
+            if (t1 === p1) t1 = String((parseInt(t1) + 1) % 100).padStart(2, '0');
+            if (t3 === p3) t3 = String((parseInt(t3) + 1) % 100).padStart(2, '0');
+        } else if (roll < winPercent * 3) {
+            // Joueur gagne lot3
+            t1 = rand(); t2 = rand(); t3 = p3;
+            if (t1 === p1) t1 = String((parseInt(t1) + 1) % 100).padStart(2, '0');
+            if (t2 === p2) t2 = String((parseInt(t2) + 1) % 100).padStart(2, '0');
+        } else {
+            // Joueur perd — tirage totalement aléatoire, éviter les correspondances
+            do { t1 = rand(); } while (t1 === p1);
+            do { t2 = rand(); } while (t2 === p2);
+            do { t3 = rand(); } while (t3 === p3);
+        }
+
+        // Calculer le gain
+        let winAmount = 0;
+        const winDetails = [];
+        if (t1 === p1) {
+            const g = mise * multLot1;
+            winAmount += g;
+            winDetails.push({ lot: 1, number: t1, gain: g });
+        }
+        if (t2 === p2) {
+            const g = mise * multLot2;
+            winAmount += g;
+            winDetails.push({ lot: 2, number: t2, gain: g });
+        }
+        if (t3 === p3) {
+            const g = mise * multLot3;
+            winAmount += g;
+            winDetails.push({ lot: 3, number: t3, gain: g });
+        }
+
+        const newBalance = balance - mise + winAmount;
+
+        // Déduire la mise, créditer le gain
+        await client.query('UPDATE players SET balance=$1 WHERE id=$2', [newBalance, req.player.id]);
+
+        // Sauvegarder comme ticket
+        const ticketId = 'PAM' + Date.now();
+        const bets = [
+            { game: 'lotopam', lot: 1, number: p1, amount: mise },
+            { game: 'lotopam', lot: 2, number: p2, amount: mise },
+            { game: 'lotopam', lot: 3, number: p3, amount: mise }
+        ];
+        await client.query(
+            `INSERT INTO tickets (ticket_id, player_id, draw_name, total_amount, win_amount, win_details, bets, checked, date)
+             VALUES ($1, $2, 'Loto Pam', $3, $4, $5, $6, true, NOW())`,
+            [ticketId, req.player.id, mise, winAmount, JSON.stringify(winDetails), JSON.stringify(bets)]
+        );
+
+        await client.query('COMMIT');
+        console.log(`🎰 Loto Pam — Joueur ${req.player.id} | Mise: ${mise} | Tirage: ${t1}-${t2}-${t3} | Gain: ${winAmount}`);
+
+        res.json({
+            success: true,
+            ticketId,
+            tirage: { t1, t2, t3 },
+            playerNumbers: { p1, p2, p3 },
+            winAmount,
+            winDetails,
+            newBalance
+        });
+    } catch(err) {
+        await client.query('ROLLBACK');
+        console.error('❌ Loto Pam erreur:', err.message);
+        res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
+    }
+});
 app.get('/api/owner/stats', authenticateOwner, async (req, res) => {
     const players = await pool.query('SELECT COUNT(*) FROM players');
     const tickets = await pool.query('SELECT COUNT(*) FROM tickets');

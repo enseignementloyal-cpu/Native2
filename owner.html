@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- ⚠️ IMPORTANT : changer cette URL si ton serveur Express tourne sur un autre domaine/port -->
+    <meta name="api-base" content="https://lotato-lsvu.onrender.com/api">
     <title>LOTATO PRO - Propriétaire</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -136,6 +138,35 @@
         </div>
         <button class="btn-primary" onclick="saveSettings()">Enregistrer</button>
         <div id="settings-message" style="margin-top:10px;"></div>
+
+        <!-- Loto Pam -->
+        <div style="margin-top:28px; border-top:1px solid rgba(255,255,255,0.08); padding-top:20px;">
+            <h3 style="margin-bottom:16px;">🎰 Loto Pam — Paramètres</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>% Chance de gagner <span style="color:#fbbf24;">(ex: 20 = 1 chance sur 5)</span></label>
+                    <input type="number" id="pam-win-percent" min="1" max="95" value="20" placeholder="20">
+                </div>
+                <div class="form-group">
+                    <label>Multiplicateur 1er lot</label>
+                    <input type="number" id="pam-mult-lot1" value="70" min="1">
+                </div>
+                <div class="form-group">
+                    <label>Multiplicateur 2e lot</label>
+                    <input type="number" id="pam-mult-lot2" value="35" min="1">
+                </div>
+                <div class="form-group">
+                    <label>Multiplicateur 3e lot</label>
+                    <input type="number" id="pam-mult-lot3" value="20" min="1">
+                </div>
+            </div>
+            <div style="background:rgba(255,193,7,0.08); border:1px solid rgba(255,193,7,0.2); border-radius:12px; padding:12px; margin-bottom:14px; font-size:0.82rem; color:#fbbf24;">
+                ⚠️ Un % élevé = facile pour le joueur. Un % faible = difficile. Recommandé : 10–25%.
+                <br>Ex: 20% → environ 1 joueur sur 5 gagne au 1er lot.
+            </div>
+            <button class="btn-primary" onclick="saveLotoPamSettings()">💾 Enregistrer Loto Pam</button>
+            <div id="pam-settings-message" style="margin-top:10px;"></div>
+        </div>
     </div>
 
     <!-- Publicité & Annonces -->
@@ -203,7 +234,12 @@
 </div>
 
 <script>
-    const API_BASE = window.location.origin + '/api';
+    const API_BASE = (() => {
+        if (window.LOTATO_API) return window.LOTATO_API;
+        const meta = document.querySelector('meta[name="api-base"]');
+        if (meta && meta.content) return meta.content;
+        return window.location.origin + '/api';
+    })();
     let token = localStorage.getItem('auth_token');
 
     if (!token) window.location.href = 'index.html';
@@ -364,6 +400,39 @@
         document.getElementById('mult-lotto4').value = mult.lotto4 || 5000;
         document.getElementById('mult-lotto5').value = mult.lotto5 || 25000;
         document.getElementById('mult-mariage').value = mult.mariage || 500;
+        // Charger aussi les paramètres Loto Pam
+        loadLotoPamSettings();
+    }
+
+    async function loadLotoPamSettings() {
+        try {
+            const s = await fetchAPI('/owner/lotopam-settings');
+            document.getElementById('pam-win-percent').value  = s.winPercent      ?? 20;
+            document.getElementById('pam-mult-lot1').value    = s.multiplierLot1  ?? 70;
+            document.getElementById('pam-mult-lot2').value    = s.multiplierLot2  ?? 35;
+            document.getElementById('pam-mult-lot3').value    = s.multiplierLot3  ?? 20;
+        } catch(e) { console.error('Erreur chargement Loto Pam settings:', e.message); }
+    }
+
+    async function saveLotoPamSettings() {
+        const msgEl = document.getElementById('pam-settings-message');
+        try {
+            const res = await fetchAPI('/owner/lotopam-settings', {
+                method: 'POST',
+                body: JSON.stringify({
+                    winPercent:      parseFloat(document.getElementById('pam-win-percent').value),
+                    multiplierLot1:  parseFloat(document.getElementById('pam-mult-lot1').value),
+                    multiplierLot2:  parseFloat(document.getElementById('pam-mult-lot2').value),
+                    multiplierLot3:  parseFloat(document.getElementById('pam-mult-lot3').value)
+                })
+            });
+            msgEl.innerHTML = res.success
+                ? '<span style="color:#4ade80;">✅ Paramètres Loto Pam enregistrés</span>'
+                : '<span style="color:red;">❌ Erreur</span>';
+        } catch(e) {
+            msgEl.innerHTML = `<span style="color:red;">❌ ${e.message}</span>`;
+        }
+        setTimeout(() => { msgEl.innerHTML = ''; }, 4000);
     }
 
     function buildSettingsPayload(overrides = {}) {
